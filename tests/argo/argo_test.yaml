@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+
+metadata:
+  generateName: hpc-test-
+  namespace: argo
+
+spec:
+
+  workflowTemplateRef:
+    name: hpc-simulation-template
+
+  arguments:
+    parameters:
+
+      - name: input-uri
+        value: datasets/demo-input
+
+      - name: output-uri
+        value: outputs/demo-run
+
+      - name: cpu
+        value: "2"
+
+      - name: memory
+        value: "2Gi"
+
+      - name: user-script
+        value: |
+          echo "=== USER JOB ==="
+
+          echo
+          echo "hostname:"
+          hostname
+
+          echo
+          echo "date:"
+          date
+
+          echo
+          echo "copying inputs into outputs"
+
+          cp -r "$INPUT_CACHE_DIR" \
+                "$INTERLINK_JOB_DIR/outputs/input-copy"
+
+          echo
+          echo "creating result file"
+
+          cat > "$INTERLINK_JOB_DIR/outputs/result.txt" <<EOF
+          simulation started
+          host: $(hostname)
+          time: $(date)
+          EOF
+
+          for i in $(seq 1 5); do
+            echo "step $i" \
+              >> "$INTERLINK_JOB_DIR/outputs/result.txt"
+
+            sleep 5
+          done
+
+          echo "simulation finished" \
+            >> "$INTERLINK_JOB_DIR/outputs/result.txt"
+
+          echo
+          echo "result file:"
+
+          cat "$INTERLINK_JOB_DIR/outputs/result.txt"

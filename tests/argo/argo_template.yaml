@@ -1,0 +1,106 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+
+metadata:
+  name: hpc-simulation-template
+  namespace: argo
+
+spec:
+
+  entrypoint: run-job
+
+  arguments:
+    parameters:
+
+      - name: image
+        value: ubuntu:22.04
+
+      - name: input-uri
+        value: datasets/example-input
+
+      - name: output-uri
+        value: outputs/example-run
+
+      - name: cpu
+        value: "2"
+
+      - name: memory
+        value: "2Gi"
+
+      - name: user-script
+        value: |
+          echo "hello from default script"
+
+  templates:
+
+    - name: run-job
+
+      metadata:
+        annotations:
+          slurm-job.vk.io/flags: "--account=eehpc-dev-2026d02-075x --partition=dev-x86"
+
+      nodeSelector:
+        kubernetes.io/hostname: interlink-node
+
+      tolerations:
+        - key: virtual-node.interlink/no-schedule
+          operator: Exists
+
+      container:
+
+        image: "{{workflow.parameters.image}}"
+
+        command:
+          - bash
+          - -c
+
+        args:
+          - |
+            set -euo pipefail
+
+            echo "=== PLATFORM START ==="
+
+            echo "INPUT_URI=$INPUT_URI"
+            echo "OUTPUT_URI=$OUTPUT_URI"
+
+            echo "INPUT_CACHE_DIR=$INPUT_CACHE_DIR"
+            echo "INTERLINK_JOB_DIR=$INTERLINK_JOB_DIR"
+
+            mkdir -p "$INTERLINK_JOB_DIR/outputs"
+
+            echo
+            echo "=== INPUT CACHE CONTENT ==="
+
+            ls -lah "$INPUT_CACHE_DIR" || true
+
+            echo
+            echo "=== USER SCRIPT START ==="
+
+            {{workflow.parameters.user-script}}
+
+            echo
+            echo "=== USER SCRIPT END ==="
+
+            echo
+            echo "=== OUTPUT CONTENT ==="
+
+            ls -lah "$INTERLINK_JOB_DIR/outputs" || true
+
+            echo
+            echo "=== PLATFORM END ==="
+
+        env:
+          - name: INPUT_URI
+            value: "{{workflow.parameters.input-uri}}"
+
+          - name: OUTPUT_URI
+            value: "{{workflow.parameters.output-uri}}"
+
+        resources:
+          requests:
+            cpu: "{{workflow.parameters.cpu}}"
+            memory: "{{workflow.parameters.memory}}"
+
+          limits:
+            cpu: "{{workflow.parameters.cpu}}"
+            memory: "{{workflow.parameters.memory}}"

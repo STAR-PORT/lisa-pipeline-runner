@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-world
+  annotations:
+    slurm-job.vk.io/flags: "--account=eehpc-dev-2026d02-075x --partition=dev-x86"
+spec:
+  automountServiceAccountToken: false
+  nodeSelector:
+    kubernetes.io/hostname: interlink-node
+  tolerations:
+    - key: virtual-node.interlink/no-schedule
+      operator: Exists
+  restartPolicy: Never
+  containers:
+  - name: hello
+    image: busybox
+    command: ["sh", "-c", "echo hello world && sleep 30"]
+    resources:
+      limits:
+        cpu: "1"
+        memory: "1Gi"
+      requests:
+        cpu: "1"
+        memory: "1Gi"
