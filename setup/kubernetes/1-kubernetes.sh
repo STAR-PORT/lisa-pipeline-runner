@@ -1,7 +1,13 @@
 # On-Premises Kubernetes Setup Script
-# This script sets up a single-node Kubernetes cluster using kubeadm on a Linux machine,
-# Access is restricted to sudo users only. Run as root or with sudo. 
-# Tested on Debian, adjust for other distros.
+# This script sets up a single-node Kubernetes control-plane node on Debian.
+# Run as root or via sudo on the target server.
+#
+# Customizable environment variables:
+#   K8S_VERSION         - Kubernetes minor version (default: 1.35)
+#   K8S_FULL_VERSION    - Kubernetes full version (default: 1.35.3)
+#   K8S_PKG_VERSION     - Debian package version (default: ${K8S_FULL_VERSION}-1.1)
+# Example:
+#   K8S_VERSION=1.35 K8S_FULL_VERSION=1.35.3 ./setup/kubernetes/1-kubernetes.sh
 
 #!/usr/bin/env bash
 set -euo pipefail
@@ -12,9 +18,19 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-K8S_VERSION="1.35"
-K8S_FULL_VERSION="1.35.3"
-K8S_PKG_VERSION="1.35.3-1.1"
+if ! command -v apt-get >/dev/null 2>&1; then
+  echo "This installer requires apt-get and can only run on Debian-based systems."
+  exit 1
+fi
+
+K8S_VERSION="${K8S_VERSION:-1.35}"
+K8S_FULL_VERSION="${K8S_FULL_VERSION:-1.35.3}"
+K8S_PKG_VERSION="${K8S_PKG_VERSION:-${K8S_FULL_VERSION}-1.1}"
+
+if [ -f /etc/kubernetes/admin.conf ]; then
+  echo "Kubernetes already initialized on this host. Exiting without changes."
+  exit 0
+fi
 
 echo "[1/10] Updating system..."
 apt-get update

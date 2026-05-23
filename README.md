@@ -15,9 +15,9 @@ This repository provides automated setup scripts and test utilities for deployin
 ## Directory Structure
 
 - **setup/** - Infrastructure setup scripts
-  - `global_storage/` - Cloud storage configuration
-  - `hpc/` - High-Performance Computing setup
-  - `kubernetes/` - Kubernetes cluster deployment
+  - `global_storage/` - Cloud storage deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
+  - `hpc/` - High-Performance Computing deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
+  - `kubernetes/` - Kubernetes cluster deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
   
 - **tests/** - Test suites and validation
   - `argo/` - Argo workflow templates and tests
@@ -36,17 +36,15 @@ Run the setup scripts in order:
 
 ```bash
 # Global storage setup
-./setup/global_storage/1-storage.sh
+./setup/global_storage/main.sh
 
 # For Kubernetes
-./setup/kubernetes/1-kubernetes.sh
-./setup/kubernetes/2-cluster.sh
-./setup/kubernetes/3-bridge.sh
+./setup/kubernetes/main.sh
 
 # For HPC
-./setup/hpc/1-bridge.sh
-./setup/hpc/2-data.sh
+./setup/hpc/main.sh
 ```
+Each setup subdirectory includes its own `README.md` and a `cleanup.sh` helper.
 
 ## Testing
 

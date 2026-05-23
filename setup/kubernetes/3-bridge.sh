@@ -1,42 +1,78 @@
 #!/usr/bin/env bash
-# Requirements - HPC access: sudo ssh-keygen -t ed25519
+# InterLink bridge installer for Kubernetes.
+# This script installs InterLink API and Virtual Kubelet support on a Debian host
+# and creates a persistent SSH tunnel to the remote HPC Sidecar.
+#
+# Customizable environment variables:
+#  INTERLINK_INSTALL_DIR     - Directory to install InterLink binaries and configs (default: /opt/interlink)
+#  INTERLINK_VERSION         - InterLink release version to install (default: 0.6.1)
+#  SIDECAR_SSH_USER          - SSH username for connecting to the HPC sidecar
+#  SIDECAR_SSH_HOST          - SSH host for connecting to the HPC sidecar
+#  SIDECAR_SSH_KEY_PATH      - SSH private key path for the remote host (default: /root/.ssh/id_ed25519)
+#  SIDECAR_LOCAL_HOST        - Local interface to bind the SSH tunnel (default: 192.168.67.64)
+#  SIDECAR_LOCAL_PORT        - Local port for the SSH tunnel (default: 5000)
+#  SIDECAR_REMOTE_PORT       - Remote port for the SSH tunnel (default: 4000)
+#  INTERLINK_DATA_ROOT       - Root directory for InterLink data (default: /tmp/interlink)
+#  INTERLINK_NODE_NAME       - Kubernetes node name for the Virtual Kubelet (default: interlink-node)
+#
+# Example:
+#   SIDECAR_SSH_HOST=example.edu INTERLINK_SIDECAR_HOST=sidecar.example.edu ./setup/kubernetes/3-bridge.sh
 
 set -euo pipefail
+
+INTERLINK_INSTALL_DIR="${INTERLINK_INSTALL_DIR:-/opt/interlink}"
+INTERLINK_VERSION="${INTERLINK_VERSION:-0.6.1}"
+SIDECAR_SSH_USER="${SIDECAR_SSH_USER:-isabelmoutinho}"
+SIDECAR_SSH_HOST="${SIDECAR_SSH_HOST:-ln01.deucalion.macc.fccn.pt}"
+SIDECAR_SSH_KEY_PATH="${SIDECAR_SSH_KEY_PATH:-/root/.ssh/id_ed25519}"
+SIDECAR_LOCAL_HOST="${SIDECAR_LOCAL_HOST:-192.168.67.64}"
+SIDECAR_LOCAL_PORT="${SIDECAR_LOCAL_PORT:-5000}"
+SIDECAR_REMOTE_PORT="${SIDECAR_REMOTE_PORT:-4000}"
+INTERLINK_DATA_ROOT="${INTERLINK_DATA_ROOT:-/tmp/interlink}"
+INTERLINK_NODE_NAME="${INTERLINK_NODE_NAME:-interlink-node}"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root (use sudo)"
   exit 1
 fi
 
-INSTALL_DIR="/opt/interlink"
-echo "[1/6] Preparing InterLink install directory: $INSTALL_DIR"
-sudo mkdir -p "$INSTALL_DIR"
-sudo chown root:root "$INSTALL_DIR"
-sudo chmod 755 "$INSTALL_DIR"
-cd "$INSTALL_DIR"
+for cmd in wget ssh tee systemctl; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Required command '$cmd' is missing. Install it before running this script."
+    exit 1
+  fi
+done
 
-echo "[2/6] Downloading InterLink binaries"
-wget https://github.com/interlink-hq/interLink/releases/download/0.6.1/interlink_Linux_x86_64
+echo "[1/6] Preparing InterLink install directory: $INTERLINK_INSTALL_DIR"
+mkdir -p "$INTERLINK_INSTALL_DIR"
+chown root:root "$INTERLINK_INSTALL_DIR"
+chmod 755 "$INTERLINK_INSTALL_DIR"
+cd "$INTERLINK_INSTALL_DIR"
+
+echo "[2/6] Downloading InterLink binaries for version $INTERLINK_VERSION"
+INTERLINK_RELEASE_BASE="https://github.com/interlink-hq/interLink/releases/download/${INTERLINK_VERSION}"
+wget "$INTERLINK_RELEASE_BASE/interlink_Linux_x86_64"
 chmod +x interlink_Linux_x86_64
-wget https://github.com/interlink-hq/interLink/releases/download/0.6.1/virtual-kubelet_Linux_x86_64
+wget "$INTERLINK_RELEASE_BASE/virtual-kubelet_Linux_x86_64"
 chmod +x virtual-kubelet_Linux_x86_64
 
 echo "[3/6] Writing InterLink configuration files"
-sudo tee "$INSTALL_DIR/InterLinkConfig.yaml" >/dev/null <<EOF
+
+tee "$INTERLINK_INSTALL_DIR/InterLinkConfig.yaml" >/dev/null <<EOF
 # Use Unix socket for local communication
 InterlinkAddress: "unix:///tmp/interlink.sock"
 InterlinkPort: ""  # Not used for Unix sockets
 
 # Remote plugin configuration
-SidecarURL: "http://192.168.67.64"
-SidecarPort: "5000"
+SidecarURL: "http://${SIDECAR_LOCAL_HOST}"
+SidecarPort: "${SIDECAR_LOCAL_PORT}"
 
 VerboseLogging: true
 ErrorsOnlyLogging: false
-DataRootFolder: "/tmp/interlink"
+DataRootFolder: "${INTERLINK_DATA_ROOT}"
 EOF
 
-sudo tee "$INSTALL_DIR/VirtualKubeletConfig.yaml" >/dev/null <<EOF
+tee "$INTERLINK_INSTALL_DIR/VirtualKubeletConfig.yaml" >/dev/null <<EOF
 # Connect to Unix socket
 InterlinkURL: "unix:///tmp/interlink.sock"
 InterlinkPort: ""  # Not used for Unix sockets
@@ -45,21 +81,21 @@ VerboseLogging: true
 ErrorsOnlyLogging: false
 
 # Node configuration
-NodeName: "my-interlink-node"
+NodeName: "${INTERLINK_NODE_NAME}"
 NodeLabels:
 "interlink.cern.ch/provider": "remote-hpc"
 EOF
 
 echo "[4/6] Writing systemd service unit files"
-sudo tee /etc/systemd/system/interlink-api.service >/dev/null <<EOF
+tee /etc/systemd/system/interlink-api.service >/dev/null <<EOF
 [Unit]
 Description=InterLink API Server
 After=network.target
 
 [Service]
-Environment=INTERLINKCONFIGPATH=/opt/interlink/InterLinkConfig.yaml
-ExecStart=/opt/interlink/interlink_Linux_x86_64
-WorkingDirectory=/opt/interlink
+Environment=INTERLINKCONFIGPATH=${INTERLINK_INSTALL_DIR}/InterLinkConfig.yaml
+ExecStart=${INTERLINK_INSTALL_DIR}/interlink_Linux_x86_64
+WorkingDirectory=${INTERLINK_INSTALL_DIR}
 Restart=always
 RestartSec=5
 
@@ -67,17 +103,17 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-sudo tee /etc/systemd/system/interlink-vk.service >/dev/null <<EOF
+tee /etc/systemd/system/interlink-vk.service >/dev/null <<EOF
 [Unit]
 Description=Virtual Kubelet for InterLink
 After=network.target interlink-api.service
 
 [Service]
 Environment=KUBECONFIG=/root/.kube/config
-ExecStart=/opt/interlink/virtual-kubelet_Linux_x86_64 \
-    --nodename interlink-node \
-    --configpath /opt/interlink/VirtualKubeletConfig.yaml
-WorkingDirectory=/opt/interlink
+ExecStart=${INTERLINK_INSTALL_DIR}/virtual-kubelet_Linux_x86_64 \
+  --nodename "${INTERLINK_NODE_NAME}" \
+  --configpath ${INTERLINK_INSTALL_DIR}/VirtualKubeletConfig.yaml
+WorkingDirectory=${INTERLINK_INSTALL_DIR}
 Restart=always
 RestartSec=5
 
@@ -85,7 +121,7 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-sudo tee /etc/systemd/system/interlink-tunnel.service >/dev/null <<EOF
+tee /etc/systemd/system/interlink-tunnel.service >/dev/null <<EOF
 [Unit]
 Description=Persistent SSH Tunnel to Slurm Sidecar
 After=network.target
@@ -93,7 +129,9 @@ After=network.target
 [Service]
 ExecStart=/usr/bin/ssh -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes \
     -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -N -L 192.168.67.64:5000:localhost:4000 isabelmoutinho@ln01.deucalion.macc.fccn.pt
+    -i ${SIDECAR_SSH_KEY_PATH} \
+    -N -L ${SIDECAR_LOCAL_HOST}:${SIDECAR_LOCAL_PORT}:localhost:${SIDECAR_REMOTE_PORT} \
+    ${SIDECAR_SSH_USER}@${SIDECAR_SSH_HOST}
 Restart=always
 RestartSec=5
 
@@ -102,15 +140,15 @@ WantedBy=multi-user.target
 EOF
 
 echo "[5/6] Reloading systemd and enabling services"
-sudo systemctl daemon-reload
-sudo systemctl enable --now interlink-tunnel
-sudo systemctl enable --now interlink-api
-sudo systemctl enable --now interlink-vk
+systemctl daemon-reload
+systemctl enable --now interlink-tunnel
+systemctl enable --now interlink-api
+systemctl enable --now interlink-vk
 
 echo "[6/6] Service and node checks"
 
-# Nodes
-sudo kubectl get nodes
+echo "InterLink bridge installation complete. Verify Kubernetes node connectivity with:"
+echo "  kubectl get nodes"
 
 # Logs
 # sudo kubectl describe node interlink-node

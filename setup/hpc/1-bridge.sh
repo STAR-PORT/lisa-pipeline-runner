@@ -1,56 +1,74 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Set WORK if not already set (common in HPC environments)
-WORK="${WORK:-$HOME/work}"
+# Customizable environment variables:
+#   HPC_PROJECT_ROOT          - root path for project files (default: /projects/EEHPC-DEV-2026D02-075)
+#   HPC_USER                  - user to enable lingering for (default: current user)
+#   HPC_WORK                  - local work path for auxiliary tools (default: $HOME/work)
+#   HPC_USER_HOME             - home directory of the HPC user (default: $HOME)
+#   INTERLINK_SIDECAR_VERSION - InterLink sidecar release version (default: 0.6.1)
+#   INTERLINK_DIR             - InterLink install/config directory (default: ${HPC_PROJECT_ROOT}/.interlink)
+#   SYNC_SCRIPT_DIR           - path for sync scripts (default: ${HPC_PROJECT_ROOT}/sync)
+#   TSOCKS_PATH               - tsocks library path (default: ${HPC_WORK}/tsocks-1.8beta5+ds1/libtsocks.so)
+#   TSOCKS_LOGIN_NODE         - login node host name (default: login01)
+#   INTERLINK_DATA_ROOT       - job data root inside InterLink (default: ${INTERLINK_DIR}/jobs)
 
-# Ensure USER is set (fallback to whoami if unset)
-USER="${USER:-$(whoami)}"
+# Load runtime configuration from the wrapper if available.
+HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075}"
+HPC_USER="${HPC_USER:-${USER:-$(whoami)}}"
+HPC_WORK="${HPC_WORK:-${WORK:-$HOME/work}}"
+HPC_USER_HOME="${HPC_USER_HOME:-$HOME}"
+INTERLINK_SIDECAR_VERSION="${INTERLINK_SIDECAR_VERSION:-0.6.1}"
+INTERLINK_DIR="${INTERLINK_DIR:-${HPC_PROJECT_ROOT}/.interlink}"
+SYNC_SCRIPT_DIR="${SYNC_SCRIPT_DIR:-${HPC_PROJECT_ROOT}/sync}"
+TSOCKS_PATH="${TSOCKS_PATH:-${HPC_WORK}/tsocks-1.8beta5+ds1/libtsocks.so}"
+TSOCKS_LOGIN_NODE="${TSOCKS_LOGIN_NODE:-login01}"
+INTERLINK_DATA_ROOT="${INTERLINK_DATA_ROOT:-${INTERLINK_DIR}/jobs}"
 
 echo "[1/6] Preparing InterLink directory"
-mkdir -p "/projects/EEHPC-DEV-2026D02-075/.interlink"
-cd "/projects/EEHPC-DEV-2026D02-075/.interlink"
-mkdir -p "/projects/EEHPC-DEV-2026D02-075/.interlink/jobs"
+mkdir -p "$INTERLINK_DIR"
+cd "$INTERLINK_DIR"
+mkdir -p "$INTERLINK_DATA_ROOT"
 
 echo "[2/6] Downloading InterLink Slurm Sidecar binary"
-wget https://github.com/interlink-hq/interlink-slurm-plugin/releases/download/0.6.1/interlink-sidecar-slurm_Linux_x86_64
+INTERLINK_RELEASE_BASE="https://github.com/interlink-hq/interlink-slurm-plugin/releases/download/${INTERLINK_SIDECAR_VERSION}"
+wget "$INTERLINK_RELEASE_BASE/interlink-sidecar-slurm_Linux_x86_64"
 chmod +x interlink-sidecar-slurm_Linux_x86_64
-touch /projects/EEHPC-DEV-2026D02-075/.interlink/sidecar.log
-cd ..
+touch "$INTERLINK_DIR/sidecar.log"
 
 echo "[3/6] Writing Slurm sidecar configuration"
-cat <<EOF > /projects/EEHPC-DEV-2026D02-075/.interlink/SlurmConfig.yaml
+cat <<EOF > "$INTERLINK_DIR/SlurmConfig.yaml"
 SidecarURL: "http://127.0.0.1"
 SidecarPort: "4000"
 SbatchPath: "/usr/bin/sbatch"
 ScancelPath: "/usr/bin/scancel"
 SqueuePath: "/usr/bin/squeue"
 SinfoPath: "/usr/bin/sinfo"
-CommandPrefix: "/projects/EEHPC-DEV-2026D02-075/sync/sync-inputs.sh"
+CommandPrefix: "${SYNC_SCRIPT_DIR}/sync-inputs.sh"
 ImagePrefix: "docker://"
 SingularityPath: "singularity"
 SingularityPrefix: ""
 SingularityDefaultOptions:
   - "-B"
-  - "/projects/EEHPC-DEV-2026D02-075"
+  - "${HPC_PROJECT_ROOT}"
   - "-B"
-  - "/home/isabelmoutinho"
+  - "${HPC_USER_HOME}"
 ExportPodData: true
-DataRootFolder: "/projects/EEHPC-DEV-2026D02-075/.interlink/jobs/"
+DataRootFolder: "${INTERLINK_DATA_ROOT}/"
 Namespace: "vk"
 Tsocks: false
-TsocksPath: "$WORK/tsocks-1.8beta5+ds1/libtsocks.so"
-TsocksLoginNode: "login01"
+TsocksPath: "${TSOCKS_PATH}"
+TsocksLoginNode: "${TSOCKS_LOGIN_NODE}"
 BashPath: /bin/bash
 VerboseLogging: true
 ErrorsOnlyLogging: false
 EnableProbes: true
 EOF
 
-chmod +x /projects/EEHPC-DEV-2026D02-075/.interlink/SlurmConfig.yaml
+chmod +x "$INTERLINK_DIR/SlurmConfig.yaml"
 
 echo "[5/6] Enabling user session and creating systemd user services"
-loginctl enable-linger $USER
+loginctl enable-linger "$HPC_USER"
 
 mkdir -p ~/.config/systemd/user
 
@@ -60,14 +78,14 @@ Description=InterLink Slurm Sidecar
 After=network.target
 
 [Service]
-Environment=SLURMCONFIGPATH=/projects/EEHPC-DEV-2026D02-075/.interlink/SlurmConfig.yaml
+Environment=SLURMCONFIGPATH=${INTERLINK_DIR}/SlurmConfig.yaml
 Environment=SHARED_FS=true
-ExecStart=/projects/EEHPC-DEV-2026D02-075/.interlink/interlink-sidecar-slurm_Linux_x86_64
-WorkingDirectory=/projects/EEHPC-DEV-2026D02-075/.interlink
+ExecStart=${INTERLINK_DIR}/interlink-sidecar-slurm_Linux_x86_64
+WorkingDirectory=${INTERLINK_DIR}
 Restart=always
 RestartSec=5
-StandardOutput=append:/projects/EEHPC-DEV-2026D02-075/.interlink/sidecar.log
-StandardError=append:/projects/EEHPC-DEV-2026D02-075/.interlink/sidecar.log
+StandardOutput=append:${INTERLINK_DIR}/sidecar.log
+StandardError=append:${INTERLINK_DIR}/sidecar.log
 
 [Install]
 WantedBy=default.target

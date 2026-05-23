@@ -1,30 +1,42 @@
 # On-Premises Kubernetes Cluster Setup Script
-# This script sets up the environment inside a kubernetes cluster
+# This script installs Argo Workflows and configures the cluster for local testing.
+#
+# Customizable environment variables:
+#   ARGO_VERSION        - Argo Workflows release tag (default: v3.7.12)
+#   CALICO_VERSION      - Calico manifest version (default: v3.28.0)
+# Example:
+#   ARGO_VERSION=v3.7.12 ./setup/kubernetes/2-cluster.sh
 
 #!/usr/bin/env bash
 set -euo pipefail
 
-ARGO_VERSION="v3.7.12"
+ARGO_VERSION="${ARGO_VERSION:-v3.7.12}"
+CALICO_VERSION="${CALICO_VERSION:-v3.28.0}"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root (use sudo)"
   exit 1
 fi
 
+if ! command -v kubectl >/dev/null 2>&1; then
+  echo "kubectl is required and was not found in PATH. Install kubectl before running this script."
+  exit 1
+fi
+
 echo "[1/5] Installing CNI (Calico) ..."
-kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
+kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
 
-# Wait until node is Ready
-kubectl wait --for=condition=Ready node/ulisses --timeout=300s || true
-# same as > sudo kubectl get pods -n kube-system
+echo "[2/5] Waiting for all cluster nodes to join..."
+kubectl wait --for=condition=Ready nodes --all --timeout=300s || true
+echo "[2/5] Node readiness check complete."
 
-echo "[2/5] Disabeling taint (required for argo) ..."
+echo "[3/5] Disabling control-plane node taints (required for Argo on a single-node cluster) ..."
 kubectl taint nodes --all node-role.kubernetes.io/control-plane-
 
 echo "[3/5] Installing Argo Workflows ..."
 # Create namespace
 kubectl create namespace argo || true
-kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.7.12/install.yaml
+kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/install.yaml
 
 # Waiting for Argo components to be ready
 kubectl wait --for=condition=Ready pods --all -n argo --timeout=300s || true
@@ -32,11 +44,15 @@ kubectl wait --for=condition=Ready pods --all -n argo --timeout=300s || true
 
 echo "[4/5] Exposing Argo Server (NodePort for local access) ..."
 
-kubectl patch svc argo-server -n argo -p '{
-  "spec": {
-    "type": "NodePort"
-  }
-}'
+if kubectl get svc argo-server -n argo >/dev/null 2>&1; then
+  kubectl patch svc argo-server -n argo -p '{
+    "spec": {
+      "type": "NodePort"
+    }
+  }'
+else
+  echo "Warning: argo-server service not found in namespace argo. Skipping NodePort patch."
+fi
 
 # kubectl patch deployment argo-server -n argo \
 #  -p '{"spec": {"template": {"spec": {"containers": [{"name": "argo-server","args": ["server","--auth-mode=server"]}]}}}}'
