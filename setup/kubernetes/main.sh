@@ -36,13 +36,13 @@ echo "  SIDECAR_REMOTE_PORT=$SIDECAR_REMOTE_PORT"
 echo "  INTERLINK_DATA_ROOT=$INTERLINK_DATA_ROOT"
 echo "  INTERLINK_NODE_NAME=$INTERLINK_NODE_NAME"
 
-echo "\n[STEP 1] Running kubernetes node setup"
+echo "[STEP 1] Running kubernetes node setup"
 bash "$SCRIPT_DIR/1-kubernetes.sh"
 
-echo "\n[STEP 2] Installing Argo components"
+echo "[STEP 2] Installing Argo components"
 bash "$SCRIPT_DIR/2-argo.sh"
 
-echo "\n[STEP 3] Installing InterLink bridge"
+echo "[STEP 3] Installing InterLink bridge"
 bash "$SCRIPT_DIR/3-bridge.sh"
 
-echo "\nKubernetes setup complete."
+echo "Kubernetes setup complete."

@@ -15,7 +15,7 @@ Each stage script has its own sensible defaults, so the wrapper only loads user-
 1. Copy the example configuration:
 
 ```sh
-cp setup/kubernetes/k8s.env.example setup/kubernetes/.env
+cp setup/kubernetes/.env.example setup/kubernetes/.env
 ```
 
 2. Edit `setup/kubernetes/.env` with any values you want to override.

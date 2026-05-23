@@ -45,18 +45,11 @@ kubectl wait --for=condition=Ready pods --all -n argo --timeout=300s || true
 echo "[4/5] Exposing Argo Server (NodePort for local access) ..."
 
 if kubectl get svc argo-server -n argo >/dev/null 2>&1; then
-  kubectl patch svc argo-server -n argo -p '{
-    "spec": {
-      "type": "NodePort"
-    }
-  }'
+  kubectl patch deployment argo-server -n argo \
+    -p '{"spec": {"template": {"spec": {"containers": [{"name": "argo-server","args": ["server","--auth-mode=server"]}]}}}}'
 else
   echo "Warning: argo-server service not found in namespace argo. Skipping NodePort patch."
 fi
-
-# kubectl patch deployment argo-server -n argo \
-#  -p '{"spec": {"template": {"spec": {"containers": [{"name": "argo-server","args": ["server","--auth-mode=server"]}]}}}}'
-
 
 echo "[5/5] Next steps:"
 echo ""
