@@ -57,9 +57,9 @@ echo "[wrapper] starting"
 
 JOB_SCRIPT="\$1"
 
-JOB_DIR="$(dirname "\$JOB_SCRIPT")"
+JOB_DIR="\$(dirname "\$JOB_SCRIPT")"
 
-ENVFILE="$(find "\$JOB_DIR" -name '*_envfile.properties' | head -n1)"
+ENVFILE="\$(find "\$JOB_DIR" -name '*_envfile.properties' | head -n1)"
 
 if [[ -f "\$ENVFILE" ]]; then
 
@@ -93,7 +93,7 @@ if [[ -n "\${INPUT_URI:-}" ]]; then
 
     LOCKFILE="\${INPUT_DIR}.lock"
 
-    mkdir -p "$(dirname "\$INPUT_DIR")"
+    mkdir -p "\$(dirname "\$INPUT_DIR")"
 
     (
         flock -x 200
@@ -117,7 +117,7 @@ USER_DIR="${DATA_DIR}/\$ARGO_USER"
 
 sed -i \
   "s|singularity exec |singularity exec -B \${USER_DIR}:/\$ARGO_USER |" \
-  "$JOB_SCRIPT"
+  "\$JOB_SCRIPT"
 
  /bin/bash "\$JOB_SCRIPT"
 
