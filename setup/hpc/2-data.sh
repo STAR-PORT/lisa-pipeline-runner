@@ -83,17 +83,13 @@ if [[ -n "\${INPUT_URI:-}" ]]; then
         exit 1
     fi
 
-    if [[ "\$INPUT_URI" == /* ]]; then
-        echo "absolute paths forbidden"
+    if [[ "\$INPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$INPUT_URI" != "/shared"* ]]; then
+        echo "input path must start with '/users/\$ARGO_USER' or '/shared'"
         exit 1
     fi
 
-    if [[ "\$INPUT_URI" != "\$ARGO_USER/"* ]] && [[ "\$INPUT_URI" != shared/* ]]; then
-        echo "input path must start with '\$ARGO_USER/' or 'shared/'"
-        exit 1
-    fi
-
-    INPUT_DIR="\$DATA_ROOT/\$INPUT_URI"
+    INPUT_PATH="\${INPUT_URI#/}"
+    INPUT_DIR="\$DATA_ROOT/\$INPUT_PATH"
 
     LOCKFILE="\${INPUT_DIR}.lock"
 
@@ -106,9 +102,9 @@ if [[ -n "\${INPUT_URI:-}" ]]; then
 
         echo "[wrapper] syncing input data"
 
-        mc mirror \
-          "${MINIO_ALIAS}/\$INPUT_URI" \
-            "\$INPUT_DIR"
+                mc mirror \
+                    "${MINIO_ALIAS}/\$INPUT_PATH" \
+                        "\$INPUT_DIR"
 
     ) 200>"\$LOCKFILE"
 
@@ -117,12 +113,13 @@ fi
 
 echo "[wrapper] launching original job"
 
-USER_DIR = "${DATA_DIR}/\$ARGO_USER"
+USER_DIR="${DATA_DIR}/\$ARGO_USER"
+
 sed -i \
   "s|singularity exec |singularity exec -B \${USER_DIR}:/\$ARGO_USER |" \
   "$JOB_SCRIPT"
 
-exec /bin/bash "\$JOB_SCRIPT"
+ /bin/bash "\$JOB_SCRIPT"
 
 if [[ -n "\${OUTPUT_URI:-}" ]]; then
     echo "[wrapper] output sync ongoing"
@@ -132,22 +129,18 @@ if [[ -n "\${OUTPUT_URI:-}" ]]; then
         exit 1
     fi
 
-    if [[ "\$OUTPUT_URI" == /* ]]; then
-        echo "absolute paths forbidden"
+    if [[ "\$OUTPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$OUTPUT_URI" != "/shared"* ]]; then
+        echo "output path must start with '/users/\$ARGO_USER' or '/shared'"
         exit 1
     fi
 
-    if [[ "\$OUTPUT_URI" != "\$ARGO_USER/"* ]] && [[ "\$OUTPUT_URI" != shared/* ]]; then
-        echo "output path must start with '\$ARGO_USER/' or 'shared/'"
-        exit 1
-    fi
-
-    OUTPUT_DIR="\$DATA_ROOT/\$OUTPUT_URI"
+    OUTPUT_PATH="\${OUTPUT_URI#/}"
+    OUTPUT_DIR="\$DATA_ROOT/\$OUTPUT_PATH"
     
     mc mirror \
       --overwrite \
       "\$OUTPUT_DIR" \
-      "${MINIO_ALIAS}/\$OUTPUT_URI"
+      "${MINIO_ALIAS}/\$OUTPUT_PATH"
 
     echo "[wrapper] output sync complete"
 fi

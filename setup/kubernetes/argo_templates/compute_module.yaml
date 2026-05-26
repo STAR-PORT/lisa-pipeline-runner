@@ -16,7 +16,7 @@ spec:
         default: "dev-x86"
 
       - name: cpu
-        default: "2"
+        default: "2000m"
 
       - name: memory
         default: "2Gi"
@@ -26,6 +26,8 @@ spec:
         slurm-job.vk.io/flags: >
           --account=eehpc-dev-2026d02-075x
           --partition={{inputs.parameters.partition}}
+          --cpus-per-task={{inputs.parameters.cpu}}
+          --mem={{inputs.parameters.memory}}
 
     nodeSelector:
       kubernetes.io/hostname: interlink-node
@@ -50,9 +52,8 @@ spec:
 
       resources:
         requests:
-          cpu: "{{inputs.parameters.cpu}}"
-          memory: "{{inputs.parameters.memory}}"
-
+          cpu: "1"
+          memory: "512Mi"
         limits:
-          cpu: "{{inputs.parameters.cpu}}"
-          memory: "{{inputs.parameters.memory}}"
+          cpu: "1"
+          memory: "512Mi"
