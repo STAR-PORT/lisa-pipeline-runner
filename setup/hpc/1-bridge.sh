@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Customizable environment variables:
-#   HPC_PROJECT_ROOT          - root path for project files (default: /projects/EEHPC-DEV-2026D02-075)
+#   HPC_PROJECT_ROOT          - root path for project files (default: /projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner)
 #   HPC_USER                  - user to enable lingering for (default: current user)
 #   HPC_WORK                  - local work path for auxiliary tools (default: $HOME/work)
 #   HPC_USER_HOME             - home directory of the HPC user (default: $HOME)
@@ -14,7 +14,7 @@ set -euo pipefail
 #   INTERLINK_DATA_ROOT       - job data root inside InterLink (default: ${INTERLINK_DIR}/jobs)
 
 # Load runtime configuration from the wrapper if available.
-HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075}"
+HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
 HPC_USER="${HPC_USER:-${USER:-$(whoami)}}"
 HPC_WORK="${HPC_WORK:-${WORK:-$HOME/work}}"
 HPC_USER_HOME="${HPC_USER_HOME:-$HOME}"

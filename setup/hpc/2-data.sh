@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Customizable environment variables:
-#   HPC_PROJECT_ROOT  - base project path (default: /projects/EEHPC-DEV-2026D02-075)
+#   HPC_PROJECT_ROOT  - base project path (default: /projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner)
 #   TOOLS_DIR         - tool install path (default: ${HPC_PROJECT_ROOT}/tools)
 #   DATA_DIR         - local data root (default: ${HPC_PROJECT_ROOT}/data)
 #   SYNC_DIR          - sync script directory (default: ${HPC_PROJECT_ROOT}/sync)
@@ -15,7 +15,7 @@ set -euo pipefail
 #   MINIO_ALIAS       - MinIO alias name (default: myminio)
 #   MINIO_REMOTE_ROOT - remote sync root (default: ${MINIO_ALIAS}/results)
 
-HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075}"
+HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
 TOOLS_DIR="${TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
 DATA_DIR="${DATA_DIR:-${HPC_PROJECT_ROOT}/data}"
 SYNC_DIR="${SYNC_DIR:-${HPC_PROJECT_ROOT}/sync}"
