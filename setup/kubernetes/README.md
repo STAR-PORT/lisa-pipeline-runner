@@ -10,6 +10,9 @@ The main entrypoint is `setup/kubernetes/main.sh`, which loads user overrides fr
 
 Each stage script has its own sensible defaults, so the wrapper only loads user-provided values.
 
+### Prerequisites
+- An ssh ed25519 key pair with access to the machine hosting the Interlink Sidecar.
+
 ### Usage
 
 1. Copy the example configuration:

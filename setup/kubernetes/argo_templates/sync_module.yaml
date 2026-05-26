@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+name: sync-module
+
+spec:
+templates:
+
+```
+- name: sync
+
+  inputs:
+    parameters:
+      - name: input_uri
+        default: ""
+
+      - name: output_uri
+        default: ""
+
+  metadata:
+    annotations:
+      slurm-job.vk.io/flags: >
+        --account=eehpc-dev-2026d02-075x
+        --partition=dev-x86
+
+  nodeSelector:
+    kubernetes.io/hostname: interlink-node
+
+  tolerations:
+    - key: virtual-node.interlink/no-schedule
+      operator: Exists
+
+  container:
+    image: ubuntu:22.04
+
+    command: ["bash", "-c"]
+
+    args:
+      - |
+        echo "sync module"
+        echo "wrapper handles synchronization"
+
+    env:
+      - name: INPUT_URI
+        value: "{{inputs.parameters.input_uri}}"
+
+      - name: OUTPUT_URI
+        value: "{{inputs.parameters.output_uri}}"
+
+      - name: ARGO_USER
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.labels['workflows.argoproj.io/creator']
+
+    resources:
+      requests:
+        cpu: "1"
+        memory: "512Mi"
+
+      limits:
+        cpu: "1"
+        memory: "512Mi"
+```

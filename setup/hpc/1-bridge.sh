@@ -50,9 +50,7 @@ SingularityPath: "singularity"
 SingularityPrefix: ""
 SingularityDefaultOptions:
   - "-B"
-  - "${HPC_PROJECT_ROOT}"
-  - "-B"
-  - "${HPC_USER_HOME}"
+  - "${HPC_PROJECT_ROOT}/data/shared:/shared:ro"
 ExportPodData: true
 DataRootFolder: "${INTERLINK_DATA_ROOT}/"
 Namespace: "vk"

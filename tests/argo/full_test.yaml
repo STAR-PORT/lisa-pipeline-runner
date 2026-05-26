@@ -1,0 +1,152 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+
+metadata:
+generateName: hybrid-hpc-pipeline-
+
+spec:
+
+entrypoint: pipeline
+
+templates:
+
+```
+- name: pipeline
+
+  dag:
+
+    tasks:
+
+      #
+      # INPUT SYNC
+      #
+
+      - name: input-sync
+
+        templateRef:
+          name: sync-module
+          template: sync
+
+        arguments:
+          parameters:
+            - name: input_uri
+              value: /isabelmoutinho/case-01
+
+      #
+      # COMPUTE PART 1
+      #
+
+      - name: compute-part1
+
+        dependencies:
+          - input-sync
+
+        templateRef:
+          name: hpc-compute-module
+          template: compute
+
+        arguments:
+          parameters:
+
+            - name: partition
+              value: dev-x86
+
+            - name: cpu
+              value: "4"
+
+            - name: memory
+              value: "8Gi"
+
+            - name: command
+              value: |
+                set -e
+
+                echo "=== PART 1 ==="
+
+                mkdir -p "/isabelmoutinho/run-01"
+
+                cp -r \
+                  /isabelmoutinho/case-01 \
+                  ./input
+
+                echo "processing stage 1"
+
+                sleep 30
+
+                echo "checkpoint-data" \
+                  > "/isabelmoutinho/run-01/checkpoint.txt"
+
+      #
+      # CHECKPOINT SYNC
+      #
+
+      - name: checkpoint-sync
+
+        dependencies:
+          - compute-part1
+
+        templateRef:
+          name: sync-module
+          template: sync
+
+        arguments:
+          parameters:
+            - name: output_uri
+              value: /isabelmoutinho/run-01
+
+      #
+      # COMPUTE PART 2
+      #
+
+      - name: compute-part2
+
+        dependencies:
+          - checkpoint-sync
+
+        templateRef:
+          name: hpc-compute-module
+          template: compute
+
+        arguments:
+          parameters:
+
+            - name: partition
+              value: dev-x86
+
+            - name: cpu
+              value: "4"
+
+            - name: memory
+              value: "8Gi"
+
+            - name: command
+              value: |
+                set -e
+
+                echo "=== PART 2 ==="
+
+                mkdir -p "/isabelmoutinho/out-01"
+
+                echo "final-result" \
+                  > "/isabelmoutinho/out-01/final.txt"
+
+                sleep 20
+
+      #
+      # FINAL SYNC
+      #
+
+      - name: final-sync
+
+        dependencies:
+          - compute-part2
+
+        templateRef:
+          name: sync-module
+          template: sync
+
+        arguments:
+          parameters:
+            - name: output_uri
+              value: /results/out-01
+```

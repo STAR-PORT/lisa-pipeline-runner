@@ -2,6 +2,8 @@
 # InterLink bridge installer for Kubernetes.
 # This script installs InterLink API and Virtual Kubelet support on a Debian host
 # and creates a persistent SSH tunnel to the remote HPC Sidecar.
+# 
+#  Prerequisite: SIDECAR_SSH_KEY_PATH in machine environment must have a valid SSH private key with access to the HPC sidecar host.
 #
 # Customizable environment variables:
 #  INTERLINK_INSTALL_DIR     - Directory to install InterLink binaries and configs (default: /opt/interlink)
