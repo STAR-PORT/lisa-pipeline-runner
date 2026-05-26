@@ -66,7 +66,7 @@ EOF
 chmod +x "$INTERLINK_DIR/SlurmConfig.yaml"
 
 echo "[5/6] Enabling user session and creating systemd user services"
-loginctl enable-linger "$HPC_USER"
+loginctl enable-linger "$HPC_USER" || true
 
 mkdir -p ~/.config/systemd/user
 
