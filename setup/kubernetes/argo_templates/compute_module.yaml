@@ -1,15 +1,15 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-name: hpc-compute-module
+  name: compute-module
 
 spec:
-templates:
+  templates:
 
-- name: compute
+  - name: compute
 
-  inputs:
-    parameters:
+    inputs:
+      parameters:
       - name: command
 
       - name: partition
@@ -21,38 +21,38 @@ templates:
       - name: memory
         default: "2Gi"
 
-  metadata:
-    annotations:
-      slurm-job.vk.io/flags: >
-        --account=eehpc-dev-2026d02-075x
-        --partition={{inputs.parameters.partition}}
+    metadata:
+      annotations:
+        slurm-job.vk.io/flags: >
+          --account=eehpc-dev-2026d02-075x
+          --partition={{inputs.parameters.partition}}
 
-  nodeSelector:
-    kubernetes.io/hostname: interlink-node
+    nodeSelector:
+      kubernetes.io/hostname: interlink-node
 
-  tolerations:
+    tolerations:
     - key: virtual-node.interlink/no-schedule
       operator: Exists
 
-  container:
-    image: ubuntu:22.04
+    container:
+      image: ubuntu:22.04
 
-    command: ["bash", "-c"]
+      command: ["bash", "-c"]
 
-    args:
+      args:
       - "{{inputs.parameters.command}}"
 
-    env:
+      env:
       - name: ARGO_USER
         valueFrom:
           fieldRef:
             fieldPath: metadata.labels['workflows.argoproj.io/creator']
 
-    resources:
-      requests:
-        cpu: "{{inputs.parameters.cpu}}"
-        memory: "{{inputs.parameters.memory}}"
+      resources:
+        requests:
+          cpu: "{{inputs.parameters.cpu}}"
+          memory: "{{inputs.parameters.memory}}"
 
-      limits:
-        cpu: "{{inputs.parameters.cpu}}"
-        memory: "{{inputs.parameters.memory}}"
+        limits:
+          cpu: "{{inputs.parameters.cpu}}"
+          memory: "{{inputs.parameters.memory}}"
