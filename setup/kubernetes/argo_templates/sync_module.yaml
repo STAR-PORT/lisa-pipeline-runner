@@ -6,7 +6,6 @@ name: sync-module
 spec:
 templates:
 
-```
 - name: sync
 
   inputs:
@@ -60,4 +59,3 @@ templates:
       limits:
         cpu: "1"
         memory: "512Mi"
-```

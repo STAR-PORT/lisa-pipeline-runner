@@ -6,7 +6,6 @@ name: hpc-compute-module
 spec:
 templates:
 
-```
 - name: compute
 
   inputs:
@@ -57,4 +56,3 @@ templates:
       limits:
         cpu: "{{inputs.parameters.cpu}}"
         memory: "{{inputs.parameters.memory}}"
-```
