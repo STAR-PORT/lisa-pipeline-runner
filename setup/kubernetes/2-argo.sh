@@ -194,6 +194,11 @@ data:
       - profile
       - email
     insecureSkipVerify: true
+  workflowDefaults: |
+    spec:
+      podMetadata:
+        labels:
+          user: "{{workflow.labels.workflows.argoproj.io/creator}}"
 "
 
 

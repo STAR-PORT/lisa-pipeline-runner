@@ -35,9 +35,7 @@ spec:
       command: ["bash", "-c"]
 
       args:
-        - |
-          echo "sync module"
-          echo "wrapper handles synchronization"
+        - "echo 'sync module' && echo 'wrapper handles synchronization'"
 
       env:
         - name: INPUT_URI
@@ -49,7 +47,7 @@ spec:
         - name: ARGO_USER
           valueFrom:
             fieldRef:
-              fieldPath: metadata.labels['workflows.argoproj.io/creator']
+              fieldPath: metadata.labels['user']
 
       resources:
         requests:

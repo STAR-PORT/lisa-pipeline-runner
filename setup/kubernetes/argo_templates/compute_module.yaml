@@ -48,7 +48,7 @@ spec:
       - name: ARGO_USER
         valueFrom:
           fieldRef:
-            fieldPath: metadata.labels['workflows.argoproj.io/creator']
+            fieldPath: metadata.labels['user']
 
       resources:
         requests:

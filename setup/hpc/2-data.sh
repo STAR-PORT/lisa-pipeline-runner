@@ -59,7 +59,7 @@ JOB_SCRIPT="\$1"
 
 JOB_DIR="\$(dirname "\$JOB_SCRIPT")"
 
-ENVFILE="\$(find "\$JOB_DIR" -name '*_envfile.properties' | head -n1)"
+ENVFILE="\$(find "\$JOB_DIR" -name 'main_envfile.properties' | head -n1)"
 
 if [[ -f "\$ENVFILE" ]]; then
 
@@ -113,7 +113,7 @@ fi
 
 echo "[wrapper] launching original job"
 
-USER_DIR="${DATA_DIR}/\$ARGO_USER"
+USER_DIR="${DATA_DIR}/users/\$ARGO_USER"
 
 sed -i \
   "s|singularity exec |singularity exec -B \${USER_DIR}:/\$ARGO_USER |" \

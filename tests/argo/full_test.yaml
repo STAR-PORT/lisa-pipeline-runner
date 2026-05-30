@@ -30,7 +30,7 @@ spec:
           arguments:
             parameters:
               - name: input_uri
-                value: /users/admin/case-01
+                value: /users/ChBhcmdvLWFkbWluLTAwMDAxEgVsb2NhbA/case-01
 
         #
         # COMPUTE PART 1
@@ -64,10 +64,10 @@ spec:
 
                   echo "=== PART 1 ==="
 
-                  mkdir -p "/users/admin/run-01"
+                  mkdir -p "/users/ChBhcmdvLWFkbWluLTAwMDAxEgVsb2NhbA/run-01"
 
                   cp -r \
-                    /users/admin/case-01 \
+                    /users/ChBhcmdvLWFkbWluLTAwMDAxEgVsb2NhbA/case-01 \
                     ./input
 
                   echo "processing stage 1"
@@ -75,7 +75,7 @@ spec:
                   sleep 30
 
                   echo "checkpoint-data" \
-                    > "/users/admin/run-01/checkpoint.txt"
+                    > "/users/ChBhcmdvLWFkbWluLTAwMDAxEgVsb2NhbA/run-01/checkpoint.txt"
 
         #
         # CHECKPOINT SYNC
@@ -128,10 +128,10 @@ spec:
 
                   echo "=== PART 2 ==="
 
-                  mkdir -p "/users/admin/out-01"
+                  mkdir -p "/users/ChBhcmdvLWFkbWluLTAwMDAxEgVsb2NhbA/out-01"
 
                   echo "final-result" \
-                    > "/users/admin/out-01/final.txt"
+                    > "/users/ChBhcmdvLWFkbWluLTAwMDAxEgVsb2NhbA/out-01/final.txt"
 
                   sleep 20
 
