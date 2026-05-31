@@ -194,11 +194,6 @@ data:
       - profile
       - email
     insecureSkipVerify: true
-  workflowDefaults: |
-    spec:
-      podMetadata:
-        labels:
-          user: "{{workflow.labels.workflows.argoproj.io/creator}}"
 "
 
 
@@ -234,6 +229,37 @@ kubectl rollout restart deployment/argo-server -n argo
 kubectl rollout status deployment/argo-server -n argo --timeout=120s
 # kubectl get pods -n argo
 
+sudo kubectl apply -f - <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-workflow-role
+  namespace: default
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["argoproj.io"]
+  resources: ["workflows", "workflowtemplates", "workflowtaskresults"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-workflow-rolebinding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default
+roleRef:
+  kind: Role
+  name: argo-workflow-role
+  apiGroup: rbac.authorization.k8s.io
+EOF
 
 echo ""
 echo "======================================================"
