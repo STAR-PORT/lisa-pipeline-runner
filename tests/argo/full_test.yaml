@@ -67,7 +67,7 @@ spec:
                 value: "This is the first compute step."
 
               - name: file
-                value: /admin/case-01/checkpoint.txt
+                value: /users/admin/case-01/checkpoint.txt
 
         #
         # CHECKPOINT SYNC
@@ -123,7 +123,7 @@ spec:
                 value: "This is the final compute step."
 
               - name: file
-                value: /admin/case-01/final.txt
+                value: /users/admin/case-01/final.txt
 
         #
         # FINAL SYNC

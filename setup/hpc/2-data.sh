@@ -83,8 +83,8 @@ if [[ -n "\${INPUT_URI:-}" ]]; then
         exit 1
     fi
 
-    if [[ "\$INPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$INPUT_URI" != "/shared"* ]]; then
-        echo "input path must start with '/users/\$ARGO_USER' or '/shared'"
+    if [[ "\$INPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$INPUT_URI" != "/users/system"* ]]; then
+        echo "input path must start with '/users/\$ARGO_USER' or 'users/system'"
         exit 1
     fi
 
@@ -116,7 +116,7 @@ echo "[wrapper] launching original job"
 USER_DIR="${DATA_DIR}/users/\$ARGO_USER"
 
 sed -i \
-  "s|singularity exec |singularity exec -B \${USER_DIR}:/\$ARGO_USER |" \
+  "s|singularity exec |singularity exec -B \${USER_DIR}:/users/\$ARGO_USER |" \
   "\$JOB_SCRIPT"
 
  /bin/bash "\$JOB_SCRIPT"
@@ -129,8 +129,8 @@ if [[ -n "\${OUTPUT_URI:-}" ]]; then
         exit 1
     fi
 
-    if [[ "\$OUTPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$OUTPUT_URI" != "/shared"* ]]; then
-        echo "output path must start with '/users/\$ARGO_USER' or '/shared'"
+    if [[ "\$OUTPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$OUTPUT_URI" != "/users/system"* ]]; then
+        echo "output path must start with '/users/\$ARGO_USER' or '/users/system'"
         exit 1
     fi
 
