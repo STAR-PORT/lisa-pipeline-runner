@@ -84,7 +84,7 @@ if [[ -n "\${INPUT_URI:-}" ]]; then
     fi
 
     if [[ "\$INPUT_URI" != "/users/\$ARGO_USER"* ]] && [[ "\$INPUT_URI" != "/users/system"* ]]; then
-        echo "input path must start with '/users/\$ARGO_USER' or 'users/system'"
+        echo "input path must start with '/users/\$ARGO_USER' or '/users/system'"
         exit 1
     fi
 

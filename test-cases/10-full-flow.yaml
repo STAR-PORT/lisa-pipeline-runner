@@ -1,0 +1,133 @@
+# Writes files then reads it.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-10-full-flow-
+  labels:
+    test: "10-full-flow"
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/admin/test-10
+          - name: user
+            value: admin
+
+      - name: compute-write
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "test-03"
+          - name: file
+            value: /users/admin/test-10/file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-transform
+        dependencies: [compute-write]
+        templateRef:
+          namespace: default
+          name: compute-transform-module
+          template: compute
+        arguments:
+          parameters:
+          - name: input_file
+            value: /users/admin/test-10/file.txt
+          - name: output_file
+            value: /users/admin/test-10/transformed-file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-simulate
+        dependencies: [compute-write]
+        templateRef:
+          namespace: default
+          name: compute-simulate-module
+          template: compute
+        arguments:
+          parameters:
+          - name: duration
+            value: "300"
+          - name: output_file
+            value: /users/admin/test-10/simulation.txt
+
+      - name: compute-aggregate
+        dependencies: [compute-transform, compute-simulate]
+        templateRef:
+          namespace: default
+          name: compute-aggregate-module
+          template: compute
+        arguments:
+          parameters:
+          - name: input_fir
+            value: /users/admin/test-10/
+          - name: output_file
+            value: /users/admin/test-10/aggregate-file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: output-sync
+        dependencies: [compute-aggregate]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-10
+          - name: user
+            value: admin
+
+      - name: compute-read
+        dependencies: [compute-write]
+        templateRef:
+          namespace: default
+          name: compute-read-module
+          template: compute
+        arguments:
+          parameters:
+          - name: file
+            value: /users/admin/test-10/aggregate-file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin

@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-10-user-isolation-
+  labels:
+    test: "10-user-isolation"
+
+spec:
+  entrypoint: pipeline
+
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/alice
+          - name: user
+            value: admin
+
+      - name: compute-write-user-a
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "user-a-data"
+          - name: file
+            value: /users/alice/output.txt
+          - name: user
+            value: alice
+
+      - name: output-sync
+        dependencies: [compute-write-user-a]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/alice
+          - name: user
+            value: admin
+
+      - name: compute-read
+        dependencies: [output-sync]
+        templateRef:
+          namespace: default
+          name: compute-read-module
+          template: compute
+        arguments:
+          parameters:
+          - name: file
+            value: /users/alice/output.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin

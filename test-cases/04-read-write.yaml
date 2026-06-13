@@ -1,0 +1,59 @@
+# Reads from file into other file (write) then syncs the dataset directory.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-04-read-write-
+  labels:
+    test: "04-read-write"
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/admin/test-04
+          - name: user
+            value: admin
+
+      - name: compute-transform
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-transform-module
+          template: compute
+        arguments:
+          parameters:
+          - name: input_file
+            value: /users/admin/test-04/read-file.txt
+          - name: output_file
+            value: /users/admin/test-04/write-file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: output-sync
+        dependencies: [compute-transform]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-04
+          - name: user
+            value: admin

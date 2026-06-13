@@ -1,0 +1,122 @@
+# 
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-05-multiple-files-
+  labels:
+    test: "05-multiple-files"
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/admin/test-05
+          - name: user
+            value: admin
+
+      - name: compute-write-1
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "test-05-file-1"
+          - name: output_file
+            value: /users/admin/test-05/write-file-1.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-write-2
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "test-05-file-2"
+          - name: output_file
+            value: /users/admin/test-05/write-file-2.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-write-3
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "test-05-file-3"
+          - name: output_file
+            value: /users/admin/test-05/write-file-3.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-aggregate
+        dependencies: [compute-write-1, compute-write-2, compute-write-3]
+        templateRef:
+          namespace: default
+          name: compute-aggregate-module
+          template: compute
+        arguments:
+          parameters:
+          - name: input_fir
+            value: /users/admin/test-05/
+          - name: output_file
+            value: /users/admin/test-05/aggregate-file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: output-sync
+        dependencies: [compute-aggregate]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-05
+          - name: user
+            value: admin

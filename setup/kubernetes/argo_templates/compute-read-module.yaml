@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: compute-read-module
+  namespace: default
+
+spec:
+  templates:
+
+  - name: compute-read
+
+    inputs:
+      parameters:
+      - name: file
+        default: "/users/admin/output.txt"
+
+      - name: partition
+        default: "dev-x86"
+
+      - name: cpu
+        default: "2"
+
+      - name: memory
+        default: "2Gi"
+
+      - name: user
+        default: "admin"
+
+    resource:
+      action: create
+      setOwnerReference: true
+      successCondition: status.succeeded == 1
+      failureCondition: status.failed == 1
+      manifest: |
+        apiVersion: batch/v1
+        kind: Job
+        metadata:
+          generateName: argo-compute-read-
+          namespace: default
+          resourceVersion: "1"
+        spec:
+          ttlSecondsAfterFinished: 300
+          template:
+            metadata:
+              annotations:
+                slurm-job.vk.io/flags: >-
+                  --account=eehpc-dev-2026d02-075x
+                  --partition={{inputs.parameters.partition}}
+                  --cpus-per-task={{inputs.parameters.cpu}}
+                  --mem={{inputs.parameters.memory}}
+            spec:
+              nodeSelector:
+                kubernetes.io/hostname: interlink-node
+              tolerations:
+              - key: virtual-node.interlink/no-schedule
+                operator: Exists
+              restartPolicy: Never
+              automountServiceAccountToken: false
+              containers:
+              - name: main
+                image: ubuntu:22.04
+                command: ["bash", "-c"]
+                args:
+                - |
+                  set -e
+                  echo "compute module: read"
+
+                  cat "{{inputs.parameters.file}}"
+
+                  sleep 30
+
+                env:
+                - name: ARGO_USER
+                  value: "{{inputs.parameters.user}}"
+                resources:
+                  requests:
+                    cpu: "1"
+                    memory: "512Mi"
+                  limits:
+                    cpu: "1"
+                    memory: "512Mi"

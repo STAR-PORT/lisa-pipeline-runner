@@ -1,0 +1,59 @@
+# Writes to file then syncs the dataset directory to test that the write module is working and that changes are propagated back to the host filesystem.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-03-write-file-
+  labels:
+    test: "03-write-file"
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/admin/test-03
+          - name: user
+            value: admin
+
+      - name: compute-write
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "test-03"
+          - name: file
+            value: /users/admin/test-03/new-file.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: output-sync
+        dependencies: [compute-write]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-03
+          - name: user
+            value: admin

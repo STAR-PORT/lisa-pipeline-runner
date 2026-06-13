@@ -1,22 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: compute-module
+  name: compute-simple-module
   namespace: default
 
 spec:
   templates:
 
-  - name: compute
+  - name: compute-simple
 
     inputs:
       parameters:
-      - name: text
-        default: "default text"
-
-      - name: file
-        default: "/users/admin/output.txt"
-
       - name: partition
         default: "dev-x86"
 
@@ -38,7 +32,7 @@ spec:
         apiVersion: batch/v1
         kind: Job
         metadata:
-          generateName: argo-compute-
+          generateName: argo-compute-simple-
           namespace: default
           resourceVersion: "1"
         spec:
@@ -66,11 +60,9 @@ spec:
                 args:
                 - |
                   set -e
-                  echo "compute module: running command"
+                  echo "compute module: doing nothing"
 
-                  echo "{{inputs.parameters.text}}" > "{{inputs.parameters.file}}"
-
-                  sleep 30
+                  sleep 10
 
                 env:
                 - name: ARGO_USER

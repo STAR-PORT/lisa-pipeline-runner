@@ -1,0 +1,51 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-06-simulation-
+  labels:
+    test: "06-simulation"
+
+spec:
+  entrypoint: pipeline
+
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/admin/test-06
+          - name: user
+            value: admin
+
+      - name: compute-simulate
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-simulate-module
+          template: compute
+        arguments:
+          parameters:
+          - name: duration
+            value: "300"
+          - name: output_file
+            value: /users/admin/test-06/simulation.txt
+
+      - name: output-sync
+        dependencies: [compute-simulate]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-06

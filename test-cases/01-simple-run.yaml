@@ -1,0 +1,30 @@
+# Simply runs a step that does nothing, to test that that basic execution is working.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-01-simple-run-
+  labels:
+    test: "01-simple-run"
+spec:
+  entrypoint: pipeline
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+
+      - name: compute
+        templateRef:
+          namespace: default
+          name: compute-simple-module
+          template: compute
+        arguments:
+          parameters:
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin

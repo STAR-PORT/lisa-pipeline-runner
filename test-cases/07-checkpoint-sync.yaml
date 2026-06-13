@@ -1,0 +1,129 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-07-checkpoint-sync-
+  labels:
+    test: "07-checkpoint-sync"
+
+spec:
+  entrypoint: pipeline
+
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+
+      - name: input-sync
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/admin/test-07
+          - name: user
+            value: admin
+
+      - name: compute-write
+        dependencies: [input-sync]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute
+        arguments:
+          parameters:
+          - name: text
+            value: "test-07-file"
+          - name: output_file
+            value: /users/admin/test-07/file-1.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: checkpoint-sync-1
+        dependencies: [compute-write]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-06
+          - name: user
+            value: admin
+
+      - name: compute-transform
+        dependencies: [checkpoint-sync-1]
+        templateRef:
+          namespace: default
+          name: compute-transform-module
+          template: compute
+        arguments:
+          parameters:
+          - name: input_file
+            value: /users/admin/test-07/file-1.txt
+          - name: output_file
+            value: /users/admin/test-07/file-2.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: checkpoint-sync-2
+        dependencies: [compute-transform]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-07
+          - name: user
+            value: admin
+
+      - name: compute-aggregate
+        dependencies: [checkpoint-sync-2]
+        templateRef:
+          namespace: default
+          name: compute-aggregate-module
+          template: compute
+        arguments:
+          parameters:
+          - name: input_fir
+            value: /users/admin/test-07/
+          - name: output_file
+            value: /users/admin/test-07/file-3.txt
+          - name: partition
+            value: dev-x86
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: output-sync
+        dependencies: [compute-aggregate]
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: output_uri
+            value: /users/admin/test-07
+          - name: user
+            value: admin
