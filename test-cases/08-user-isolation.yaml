@@ -1,10 +1,11 @@
+# This workflow tests user isolation by having a user write to a file and then another user read from that file. The second user should not be able to read the file written by the first user, ensuring that user isolation is enforced.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   namespace: default
-  generateName: test-10-user-isolation-
+  generateName: test-08-user-isolation-
   labels:
-    test: "10-user-isolation"
+    test: "08-user-isolation"
 
 spec:
   entrypoint: pipeline
@@ -64,8 +65,6 @@ spec:
           parameters:
           - name: file
             value: /users/alice/output.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

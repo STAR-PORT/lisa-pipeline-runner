@@ -1,24 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: compute-transform-module
+  name: compute-simulate-module
   namespace: default
 
 spec:
   templates:
 
-  - name: compute-transform
+  - name: compute-simulate
 
     inputs:
       parameters:
-      - name: input_file
-        default: "/users/admin/input.txt"
+      - name: duration
+        default: "300"
 
       - name: output_file
-        default: "/users/admin/output.txt"
-
-      - name: partition
-        default: "dev-x86"
+        default: "/users/admin/simulation.txt"
 
       - name: cpu
         default: "2"
@@ -38,7 +35,7 @@ spec:
         apiVersion: batch/v1
         kind: Job
         metadata:
-          generateName: argo-compute-transform-
+          generateName: argo-compute-simulate-
           namespace: default
           resourceVersion: "1"
         spec:
@@ -47,8 +44,8 @@ spec:
             metadata:
               annotations:
                 slurm-job.vk.io/flags: >-
-                  --account=eehpc-dev-2026d02-075x
-                  --partition={{inputs.parameters.partition}}
+                  --account=${SLURM_ACCOUNT}
+                  --partition=${SLURM_PARTITION}
                   --cpus-per-task={{inputs.parameters.cpu}}
                   --mem={{inputs.parameters.memory}}
             spec:
@@ -66,13 +63,16 @@ spec:
                 args:
                 - |
                   set -e
-                  echo "compute module: transform"
+                  echo "compute module: simulation"
 
-                  tr '[:lower:]' '[:upper:]' \
-                    < "{{inputs.parameters.input_file}}" \
+                  END=$((SECONDS + {{inputs.parameters.duration}}))
+
+                  while [ $SECONDS -lt $END ]; do
+                    X=$((12345 * 67890))
+                  done
+
+                  echo "completed after {{inputs.parameters.duration}} seconds" \
                     > "{{inputs.parameters.output_file}}"
-
-                  sleep 30
 
                 env:
                 - name: ARGO_USER

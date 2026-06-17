@@ -35,6 +35,8 @@ echo "  SIDECAR_LOCAL_PORT=$SIDECAR_LOCAL_PORT"
 echo "  SIDECAR_REMOTE_PORT=$SIDECAR_REMOTE_PORT"
 echo "  INTERLINK_DATA_ROOT=$INTERLINK_DATA_ROOT"
 echo "  INTERLINK_NODE_NAME=$INTERLINK_NODE_NAME"
+echo "  SLURM_ACCOUNT=$SLURM_ACCOUNT"
+echo "  SLURM_PARTITION=$SLURM_PARTITION"
 
 echo "[STEP 1] Running kubernetes node setup"
 bash "$SCRIPT_DIR/1-kubernetes.sh"
@@ -44,5 +46,12 @@ bash "$SCRIPT_DIR/2-argo.sh"
 
 echo "[STEP 3] Installing InterLink bridge"
 bash "$SCRIPT_DIR/3-bridge.sh"
+
+echo "[STEP 4] Applying Templates"
+for tmpl in "argo_templates"/*.yaml.tmpl; do
+  out="/tmp/$(basename "${tmpl%.tmpl}")"
+  envsubst < "$tmpl" > "$out"
+  kubectl apply -f "$out"
+done
 
 echo "Kubernetes setup complete."

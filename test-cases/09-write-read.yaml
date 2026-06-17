@@ -36,8 +36,6 @@ spec:
             value: "test-09"
           - name: file
             value: /users/admin/test-09/new-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -68,8 +66,6 @@ spec:
           parameters:
           - name: file
             value: /users/admin/test-09/new-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

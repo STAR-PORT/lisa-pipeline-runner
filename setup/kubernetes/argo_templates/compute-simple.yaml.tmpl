@@ -1,22 +1,16 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: compute-read-module
+  name: compute-simple-module
   namespace: default
 
 spec:
   templates:
 
-  - name: compute-read
+  - name: compute-simple
 
     inputs:
       parameters:
-      - name: file
-        default: "/users/admin/output.txt"
-
-      - name: partition
-        default: "dev-x86"
-
       - name: cpu
         default: "2"
 
@@ -35,7 +29,7 @@ spec:
         apiVersion: batch/v1
         kind: Job
         metadata:
-          generateName: argo-compute-read-
+          generateName: argo-compute-simple-
           namespace: default
           resourceVersion: "1"
         spec:
@@ -44,8 +38,8 @@ spec:
             metadata:
               annotations:
                 slurm-job.vk.io/flags: >-
-                  --account=eehpc-dev-2026d02-075x
-                  --partition={{inputs.parameters.partition}}
+                  --account=${SLURM_ACCOUNT}
+                  --partition=${SLURM_PARTITION}
                   --cpus-per-task={{inputs.parameters.cpu}}
                   --mem={{inputs.parameters.memory}}
             spec:
@@ -63,11 +57,9 @@ spec:
                 args:
                 - |
                   set -e
-                  echo "compute module: read"
+                  echo "compute module: doing nothing"
 
-                  cat "{{inputs.parameters.file}}"
-
-                  sleep 30
+                  sleep 10
 
                 env:
                 - name: ARGO_USER

@@ -34,8 +34,6 @@ spec:
           parameters:
           - name: file
             value: /users/admin/test-02/existing-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -53,8 +51,6 @@ spec:
           parameters:
           - name: file
             value: /users/admin/case-01/missing-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

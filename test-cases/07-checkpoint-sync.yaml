@@ -1,3 +1,4 @@
+# This workflow tests the checkpointing and syncing of intermediate outputs between compute steps.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
@@ -38,8 +39,6 @@ spec:
             value: "test-07-file"
           - name: output_file
             value: /users/admin/test-07/file-1.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -72,8 +71,6 @@ spec:
             value: /users/admin/test-07/file-1.txt
           - name: output_file
             value: /users/admin/test-07/file-2.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -106,8 +103,6 @@ spec:
             value: /users/admin/test-07/
           - name: output_file
             value: /users/admin/test-07/file-3.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

@@ -36,8 +36,6 @@ spec:
             value: "test-03"
           - name: file
             value: /users/admin/test-03/new-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

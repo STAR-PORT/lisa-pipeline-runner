@@ -1,4 +1,4 @@
-# Writes files then reads it.
+# This workflow tests a full big flow from input synchronization to output synchronization.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
@@ -36,8 +36,6 @@ spec:
             value: "test-03"
           - name: file
             value: /users/admin/test-10/file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -57,8 +55,6 @@ spec:
             value: /users/admin/test-10/file.txt
           - name: output_file
             value: /users/admin/test-10/transformed-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -91,8 +87,6 @@ spec:
             value: /users/admin/test-10/
           - name: output_file
             value: /users/admin/test-10/aggregate-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -123,8 +117,6 @@ spec:
           parameters:
           - name: file
             value: /users/admin/test-10/aggregate-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

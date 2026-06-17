@@ -1,18 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
-  name: compute-simple-module
+  name: compute-transform-module
   namespace: default
 
 spec:
   templates:
 
-  - name: compute-simple
+  - name: compute-transform
 
     inputs:
       parameters:
-      - name: partition
-        default: "dev-x86"
+      - name: input_file
+        default: "/users/admin/input.txt"
+
+      - name: output_file
+        default: "/users/admin/output.txt"
 
       - name: cpu
         default: "2"
@@ -32,7 +35,7 @@ spec:
         apiVersion: batch/v1
         kind: Job
         metadata:
-          generateName: argo-compute-simple-
+          generateName: argo-compute-transform-
           namespace: default
           resourceVersion: "1"
         spec:
@@ -41,8 +44,8 @@ spec:
             metadata:
               annotations:
                 slurm-job.vk.io/flags: >-
-                  --account=eehpc-dev-2026d02-075x
-                  --partition={{inputs.parameters.partition}}
+                  --account=${SLURM_ACCOUNT}
+                  --partition=${SLURM_PARTITION}
                   --cpus-per-task={{inputs.parameters.cpu}}
                   --mem={{inputs.parameters.memory}}
             spec:
@@ -60,9 +63,13 @@ spec:
                 args:
                 - |
                   set -e
-                  echo "compute module: doing nothing"
+                  echo "compute module: transform"
 
-                  sleep 10
+                  tr '[:lower:]' '[:upper:]' \
+                    < "{{inputs.parameters.input_file}}" \
+                    > "{{inputs.parameters.output_file}}"
+
+                  sleep 30
 
                 env:
                 - name: ARGO_USER

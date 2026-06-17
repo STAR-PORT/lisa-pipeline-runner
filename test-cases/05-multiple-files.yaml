@@ -1,4 +1,4 @@
-# 
+# Writes to multiple files then aggregates those outputs into a single file befire syncing.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
@@ -36,8 +36,6 @@ spec:
             value: "test-05-file-1"
           - name: output_file
             value: /users/admin/test-05/write-file-1.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -57,8 +55,6 @@ spec:
             value: "test-05-file-2"
           - name: output_file
             value: /users/admin/test-05/write-file-2.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -78,8 +74,6 @@ spec:
             value: "test-05-file-3"
           - name: output_file
             value: /users/admin/test-05/write-file-3.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
@@ -99,8 +93,6 @@ spec:
             value: /users/admin/test-05/
           - name: output_file
             value: /users/admin/test-05/aggregate-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory

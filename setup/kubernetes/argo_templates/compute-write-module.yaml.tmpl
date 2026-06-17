@@ -17,9 +17,6 @@ spec:
       - name: file
         default: "/users/admin/output.txt"
 
-      - name: partition
-        default: "dev-x86"
-
       - name: cpu
         default: "2"
 
@@ -47,8 +44,8 @@ spec:
             metadata:
               annotations:
                 slurm-job.vk.io/flags: >-
-                  --account=eehpc-dev-2026d02-075x
-                  --partition={{inputs.parameters.partition}}
+                  --account=${SLURM_ACCOUNT}
+                  --partition=${SLURM_PARTITION}
                   --cpus-per-task={{inputs.parameters.cpu}}
                   --mem={{inputs.parameters.memory}}
             spec:

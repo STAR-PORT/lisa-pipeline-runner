@@ -36,8 +36,6 @@ spec:
             value: /users/admin/test-04/read-file.txt
           - name: output_file
             value: /users/admin/test-04/write-file.txt
-          - name: partition
-            value: dev-x86
           - name: cpu
             value: "2"
           - name: memory
