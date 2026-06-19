@@ -29,7 +29,7 @@ spec:
         templateRef:
           namespace: default
           name: compute-transform-module
-          template: compute
+          template: compute-transform
         arguments:
           parameters:
           - name: input_file

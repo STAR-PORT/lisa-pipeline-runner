@@ -1,0 +1,104 @@
+# This workflow tests user isolation by having a user write to a file and then another user read from that file. The second user should not be able to read the file written by the first user, ensuring that user isolation is enforced.
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-08-user-isolation-
+  labels:
+    test: "08-user-isolation"
+
+spec:
+  entrypoint: pipeline
+
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+
+      - name: input-sync-alice
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/alice/test-08
+          - name: user
+            value: alice
+
+      - name: input-sync-system
+        templateRef:
+          namespace: default
+          name: sync-module
+          template: sync
+        arguments:
+          parameters:
+          - name: input_uri
+            value: /users/system/test-08
+          - name: user
+            value: admin
+
+      - name: compute-read-alice
+        dependencies: [input-sync-alice]
+        templateRef:
+          namespace: default
+          name: compute-read-module
+          template: compute-read
+        arguments:
+          parameters:
+          - name: file
+            value: /users/alice/test-08/private.txt
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-write-alice
+        dependencies: [input-sync-alice]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute-write
+        arguments:
+          parameters:
+          - name: text
+            value: "This step will fail."
+          - name: file
+            value: /users/alice/test-08/output.txt
+          - name: user
+            value: admin
+
+      - name: compute-read-system
+        dependencies: [input-sync-system]
+        templateRef:
+          namespace: default
+          name: compute-read-module
+          template: compute-read
+        arguments:
+          parameters:
+          - name: file
+            value: /users/system/test-08/public.txt
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
+          - name: user
+            value: admin
+
+      - name: compute-write-system
+        dependencies: [input-sync-system]
+        templateRef:
+          namespace: default
+          name: compute-write-module
+          template: compute-write
+        arguments:
+          parameters:
+          - name: text
+            value: "This step will fail."
+          - name: file
+            value: /users/system/test-08/output.txt
+          - name: user
+            value: admin

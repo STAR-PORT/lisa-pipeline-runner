@@ -1,11 +1,11 @@
-# Writes to file then syncs the dataset directory to test that the write module is working and that changes are propagated back to the host filesystem.
+# Sync dataset directory then reads an existing file and a missing file to test both success and failure cases of the read module.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   namespace: default
-  generateName: test-03-write-file-
+  generateName: test-02-read-file-
   labels:
-    test: "03-write-file"
+    test: "02-read-file"
 spec:
   entrypoint: pipeline
   templates:
@@ -20,22 +20,20 @@ spec:
         arguments:
           parameters:
           - name: input_uri
-            value: /users/admin/test-03
+            value: /users/admin/test-02
           - name: user
             value: admin
 
-      - name: compute-write
+      - name: compute-read-success
         dependencies: [input-sync]
         templateRef:
           namespace: default
-          name: compute-write-module
-          template: compute
+          name: compute-read-module
+          template: compute-read
         arguments:
           parameters:
-          - name: text
-            value: "test-03"
           - name: file
-            value: /users/admin/test-03/new-file.txt
+            value: /users/admin/test-02/existing-file.txt
           - name: cpu
             value: "2"
           - name: memory
@@ -43,15 +41,19 @@ spec:
           - name: user
             value: admin
 
-      - name: output-sync
-        dependencies: [compute-write]
+      - name: compute-read-fail
+        dependencies: [input-sync]
         templateRef:
           namespace: default
-          name: sync-module
-          template: sync
+          name: compute-read-module
+          template: compute-read
         arguments:
           parameters:
-          - name: output_uri
-            value: /users/admin/test-03
+          - name: file
+            value: /users/admin/test-02/missing-file.txt
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
           - name: user
             value: admin

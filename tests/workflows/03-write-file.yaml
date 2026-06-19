@@ -1,11 +1,11 @@
-# Writes files then reads it.
+# Writes to file then syncs the dataset directory to test that the write module is working and that changes are propagated back to the host filesystem.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   namespace: default
-  generateName: test-09-write-read-
+  generateName: test-03-write-file-
   labels:
-    test: "09-write-read"
+    test: "03-write-file"
 spec:
   entrypoint: pipeline
   templates:
@@ -20,7 +20,7 @@ spec:
         arguments:
           parameters:
           - name: input_uri
-            value: /users/admin/test-09
+            value: /users/admin/test-03
           - name: user
             value: admin
 
@@ -29,13 +29,13 @@ spec:
         templateRef:
           namespace: default
           name: compute-write-module
-          template: compute
+          template: compute-write
         arguments:
           parameters:
           - name: text
-            value: "test-09"
+            value: "This file was created by the compute-write module."
           - name: file
-            value: /users/admin/test-09/new-file.txt
+            value: /users/admin/test-03/new-file.txt
           - name: cpu
             value: "2"
           - name: memory
@@ -52,23 +52,6 @@ spec:
         arguments:
           parameters:
           - name: output_uri
-            value: /users/admin/test-09
-          - name: user
-            value: admin
-
-      - name: compute-read
-        dependencies: [compute-write]
-        templateRef:
-          namespace: default
-          name: compute-read-module
-          template: compute
-        arguments:
-          parameters:
-          - name: file
-            value: /users/admin/test-09/new-file.txt
-          - name: cpu
-            value: "2"
-          - name: memory
-            value: "2Gi"
+            value: /users/admin/test-03
           - name: user
             value: admin

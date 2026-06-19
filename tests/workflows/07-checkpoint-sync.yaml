@@ -1,17 +1,20 @@
-# Writes to multiple files then aggregates those outputs into a single file befire syncing.
+# This workflow tests the checkpointing and syncing of intermediate outputs between compute steps.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   namespace: default
-  generateName: test-05-multiple-files-
+  generateName: test-07-checkpoint-sync-
   labels:
-    test: "05-multiple-files"
+    test: "07-checkpoint-sync"
+
 spec:
   entrypoint: pipeline
+
   templates:
   - name: pipeline
     dag:
       tasks:
+
       - name: input-sync
         templateRef:
           namespace: default
@@ -20,22 +23,22 @@ spec:
         arguments:
           parameters:
           - name: input_uri
-            value: /users/admin/test-05
+            value: /users/admin/test-07
           - name: user
             value: admin
 
-      - name: compute-write-1
+      - name: compute-write
         dependencies: [input-sync]
         templateRef:
           namespace: default
           name: compute-write-module
-          template: compute
+          template: compute-write
         arguments:
           parameters:
           - name: text
-            value: "test-05-file-1"
-          - name: output_file
-            value: /users/admin/test-05/write-file-1.txt
+            value: "test-07-file"
+          - name: file
+            value: /users/admin/test-07/file-1.txt
           - name: cpu
             value: "2"
           - name: memory
@@ -43,18 +46,31 @@ spec:
           - name: user
             value: admin
 
-      - name: compute-write-2
-        dependencies: [input-sync]
+      - name: checkpoint-sync-1
+        dependencies: [compute-write]
         templateRef:
           namespace: default
-          name: compute-write-module
-          template: compute
+          name: sync-module
+          template: sync
         arguments:
           parameters:
-          - name: text
-            value: "test-05-file-2"
+          - name: output_uri
+            value: /users/admin/test-07
+          - name: user
+            value: admin
+
+      - name: compute-transform
+        dependencies: [checkpoint-sync-1]
+        templateRef:
+          namespace: default
+          name: compute-transform-module
+          template: compute-transform
+        arguments:
+          parameters:
+          - name: input_file
+            value: /users/admin/test-07/file-1.txt
           - name: output_file
-            value: /users/admin/test-05/write-file-2.txt
+            value: /users/admin/test-07/file-2.txt
           - name: cpu
             value: "2"
           - name: memory
@@ -62,37 +78,31 @@ spec:
           - name: user
             value: admin
 
-      - name: compute-write-3
-        dependencies: [input-sync]
+      - name: checkpoint-sync-2
+        dependencies: [compute-transform]
         templateRef:
           namespace: default
-          name: compute-write-module
-          template: compute
+          name: sync-module
+          template: sync
         arguments:
           parameters:
-          - name: text
-            value: "test-05-file-3"
-          - name: output_file
-            value: /users/admin/test-05/write-file-3.txt
-          - name: cpu
-            value: "2"
-          - name: memory
-            value: "2Gi"
+          - name: output_uri
+            value: /users/admin/test-07
           - name: user
             value: admin
 
       - name: compute-aggregate
-        dependencies: [compute-write-1, compute-write-2, compute-write-3]
+        dependencies: [checkpoint-sync-2]
         templateRef:
           namespace: default
           name: compute-aggregate-module
-          template: compute
+          template: compute-aggregate
         arguments:
           parameters:
-          - name: input_fir
-            value: /users/admin/test-05/
+          - name: input_dir
+            value: /users/admin/test-07
           - name: output_file
-            value: /users/admin/test-05/aggregate-file.txt
+            value: /users/admin/test-07/file-3.txt
           - name: cpu
             value: "2"
           - name: memory
@@ -109,6 +119,6 @@ spec:
         arguments:
           parameters:
           - name: output_uri
-            value: /users/admin/test-05
+            value: /users/admin/test-07
           - name: user
             value: admin

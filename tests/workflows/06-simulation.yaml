@@ -32,7 +32,7 @@ spec:
         templateRef:
           namespace: default
           name: compute-simulate-module
-          template: compute
+          template: compute-simulate
         arguments:
           parameters:
           - name: duration

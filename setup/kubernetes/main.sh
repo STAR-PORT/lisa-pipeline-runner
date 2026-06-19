@@ -48,7 +48,7 @@ echo "[STEP 3] Installing InterLink bridge"
 bash "$SCRIPT_DIR/3-bridge.sh"
 
 echo "[STEP 4] Applying Templates"
-for tmpl in "argo_templates"/*.yaml.tmpl; do
+for tmpl in argo_templates/*.yaml.tmpl; do
   out="/tmp/$(basename "${tmpl%.tmpl}")"
   envsubst < "$tmpl" > "$out"
   kubectl apply -f "$out"

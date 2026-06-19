@@ -1,20 +1,17 @@
-# This workflow tests user isolation by having a user write to a file and then another user read from that file. The second user should not be able to read the file written by the first user, ensuring that user isolation is enforced.
+# Writes files then reads it.
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   namespace: default
-  generateName: test-08-user-isolation-
+  generateName: test-09-write-read-
   labels:
-    test: "08-user-isolation"
-
+    test: "09-write-read"
 spec:
   entrypoint: pipeline
-
   templates:
   - name: pipeline
     dag:
       tasks:
-
       - name: input-sync
         templateRef:
           namespace: default
@@ -23,27 +20,31 @@ spec:
         arguments:
           parameters:
           - name: input_uri
-            value: /users/alice
+            value: /users/admin/test-09
           - name: user
             value: admin
 
-      - name: compute-write-user-a
+      - name: compute-write
         dependencies: [input-sync]
         templateRef:
           namespace: default
           name: compute-write-module
-          template: compute
+          template: compute-write
         arguments:
           parameters:
           - name: text
-            value: "user-a-data"
+            value: "test-09"
           - name: file
-            value: /users/alice/output.txt
+            value: /users/admin/test-09/new-file.txt
+          - name: cpu
+            value: "2"
+          - name: memory
+            value: "2Gi"
           - name: user
-            value: alice
+            value: admin
 
       - name: output-sync
-        dependencies: [compute-write-user-a]
+        dependencies: [compute-write]
         templateRef:
           namespace: default
           name: sync-module
@@ -51,20 +52,20 @@ spec:
         arguments:
           parameters:
           - name: output_uri
-            value: /users/alice
+            value: /users/admin/test-09
           - name: user
             value: admin
 
       - name: compute-read
-        dependencies: [output-sync]
+        dependencies: [compute-write]
         templateRef:
           namespace: default
           name: compute-read-module
-          template: compute
+          template: compute-read
         arguments:
           parameters:
           - name: file
-            value: /users/alice/output.txt
+            value: /users/admin/test-09/new-file.txt
           - name: cpu
             value: "2"
           - name: memory

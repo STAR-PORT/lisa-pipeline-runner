@@ -138,7 +138,7 @@ if [[ -n "\${OUTPUT_URI:-}" ]]; then
     OUTPUT_DIR="\$DATA_ROOT/\$OUTPUT_PATH"
     
     mc mirror \
-      --overwrite \
+    --overwrite \
       "\$OUTPUT_DIR" \
       "${MINIO_ALIAS}/\$OUTPUT_PATH"
 
@@ -149,6 +149,3 @@ echo "[wrapper] done"
 EOF
 
 chmod +x "$SYNC_DIR/sync-data.sh"
-
-
-# cd ${HPC_PROJECT_ROOT}/.interlink/jobs

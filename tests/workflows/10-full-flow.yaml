@@ -29,7 +29,7 @@ spec:
         templateRef:
           namespace: default
           name: compute-write-module
-          template: compute
+          template: compute-write
         arguments:
           parameters:
           - name: text
@@ -48,7 +48,7 @@ spec:
         templateRef:
           namespace: default
           name: compute-transform-module
-          template: compute
+          template: compute-transform
         arguments:
           parameters:
           - name: input_file
@@ -67,7 +67,7 @@ spec:
         templateRef:
           namespace: default
           name: compute-simulate-module
-          template: compute
+          template: compute-simulate
         arguments:
           parameters:
           - name: duration
@@ -80,11 +80,11 @@ spec:
         templateRef:
           namespace: default
           name: compute-aggregate-module
-          template: compute
+          template: compute-aggregate
         arguments:
           parameters:
-          - name: input_fir
-            value: /users/admin/test-10/
+          - name: input_dir
+            value: /users/admin/test-10
           - name: output_file
             value: /users/admin/test-10/aggregate-file.txt
           - name: cpu
@@ -108,11 +108,11 @@ spec:
             value: admin
 
       - name: compute-read
-        dependencies: [compute-write]
+        dependencies: [output-sync]
         templateRef:
           namespace: default
           name: compute-read-module
-          template: compute
+          template: compute-read
         arguments:
           parameters:
           - name: file
