@@ -71,7 +71,7 @@ spec:
         arguments:
           parameters:
           - name: duration
-            value: "300"
+            value: "60"
           - name: output_file
             value: /users/admin/test-10/simulation.txt
 

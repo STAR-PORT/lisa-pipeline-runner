@@ -12,7 +12,7 @@ spec:
     inputs:
       parameters:
       - name: duration
-        default: "300"
+        default: "60"
 
       - name: output_file
         default: "/users/admin/simulation.txt"
@@ -65,10 +65,11 @@ spec:
                   set -e
                   echo "compute module: simulation"
 
-                  END=$((SECONDS + {{inputs.parameters.duration}}))
+                  START=$(date +%s)
+                  END_TS=$((START + 300))
 
-                  while [ $SECONDS -lt $END ]; do
-                    X=$((12345 * 67890))
+                  while [ "$(date +%s)" -lt "$END_TS" ]; do
+                      X=$((12345 * 67890))
                   done
 
                   echo "completed after {{inputs.parameters.duration}} seconds" \
