@@ -14,9 +14,9 @@ spec:
       tasks:
       - name: input-sync
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: input_uri
@@ -27,9 +27,9 @@ spec:
       - name: compute-read-success
         dependencies: [input-sync]
         templateRef:
-          namespace: default
           name: compute-read-module
           template: compute-read
+          clusterScope: true
         arguments:
           parameters:
           - name: file
@@ -44,9 +44,9 @@ spec:
       - name: compute-read-fail
         dependencies: [input-sync]
         templateRef:
-          namespace: default
           name: compute-read-module
           template: compute-read
+          clusterScope: true
         arguments:
           parameters:
           - name: file

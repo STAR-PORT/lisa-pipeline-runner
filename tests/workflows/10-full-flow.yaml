@@ -1,125 +1,132 @@
-# This workflow tests a full big flow from input synchronization to output synchronization.
+# System CronWorkflow tests a full big flow from input synchronization to output synchronization.
 apiVersion: argoproj.io/v1alpha1
-kind: Workflow
+kind: CronWorkflow
 metadata:
-  namespace: default
-  generateName: test-10-full-flow-
-  labels:
-    test: "10-full-flow"
+  name: test-10-full-flow
+  namespace: argo
 spec:
-  entrypoint: pipeline
-  templates:
-  - name: pipeline
-    dag:
-      tasks:
-      - name: input-sync
-        templateRef:
-          namespace: default
-          name: sync-module
-          template: sync
-        arguments:
-          parameters:
-          - name: input_uri
-            value: /users/admin/test-10
-          - name: user
-            value: admin
+  schedule: "0 23 * * *" # everyday at midnight
+  timezone: "UTC"
+  suspend: false
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  startingDeadlineSeconds: 0
+  workflowSpec:
+    serviceAccountName: argo-system-scheduler
+    entrypoint: pipeline
+    templates:
+    - name: pipeline
+      dag:
+        tasks:
+        - name: input-sync
+          templateRef:
+            name: sync-module
+            template: sync
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: input_uri
+              value: /users/system/test-10
+            - name: user
+              value: system
 
-      - name: compute-write
-        dependencies: [input-sync]
-        templateRef:
-          namespace: default
-          name: compute-write-module
-          template: compute-write
-        arguments:
-          parameters:
-          - name: text
-            value: "test-03"
-          - name: file
-            value: /users/admin/test-10/file.txt
-          - name: cpu
-            value: "2"
-          - name: memory
-            value: "2Gi"
-          - name: user
-            value: admin
+        - name: compute-write
+          dependencies: [input-sync]
+          templateRef:
+            name: compute-write-module
+            template: compute-write
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: text
+              value: "test-03"
+            - name: file
+              value: /users/system/test-10/file.txt
+            - name: cpu
+              value: "2"
+            - name: memory
+              value: "2Gi"
+            - name: user
+              value: system
 
-      - name: compute-transform
-        dependencies: [compute-write]
-        templateRef:
-          namespace: default
-          name: compute-transform-module
-          template: compute-transform
-        arguments:
-          parameters:
-          - name: input_file
-            value: /users/admin/test-10/file.txt
-          - name: output_file
-            value: /users/admin/test-10/transformed-file.txt
-          - name: cpu
-            value: "2"
-          - name: memory
-            value: "2Gi"
-          - name: user
-            value: admin
+        - name: compute-transform
+          dependencies: [compute-write]
+          templateRef:
+            name: compute-transform-module
+            template: compute-transform
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: input_file
+              value: /users/system/test-10/file.txt
+            - name: output_file
+              value: /users/system/test-10/transformed-file.txt
+            - name: cpu
+              value: "2"
+            - name: memory
+              value: "2Gi"
+            - name: user
+              value: system
 
-      - name: compute-simulate
-        dependencies: [compute-write]
-        templateRef:
-          namespace: default
-          name: compute-simulate-module
-          template: compute-simulate
-        arguments:
-          parameters:
-          - name: duration
-            value: "60"
-          - name: output_file
-            value: /users/admin/test-10/simulation.txt
+        - name: compute-simulate
+          dependencies: [compute-write]
+          templateRef:
+            name: compute-simulate-module
+            template: compute-simulate
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: duration
+              value: "60"
+            - name: output_file
+              value: /users/system/test-10/simulation.txt
 
-      - name: compute-aggregate
-        dependencies: [compute-transform, compute-simulate]
-        templateRef:
-          namespace: default
-          name: compute-aggregate-module
-          template: compute-aggregate
-        arguments:
-          parameters:
-          - name: input_dir
-            value: /users/admin/test-10
-          - name: output_file
-            value: /users/admin/test-10/aggregate-file.txt
-          - name: cpu
-            value: "2"
-          - name: memory
-            value: "2Gi"
-          - name: user
-            value: admin
+        - name: compute-aggregate
+          dependencies: [compute-transform, compute-simulate]
+          templateRef:
+            name: compute-aggregate-module
+            template: compute-aggregate
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: input_dir
+              value: /users/system/test-10
+            - name: output_file
+              value: /users/system/test-10/aggregate-file.txt
+            - name: cpu
+              value: "2"
+            - name: memory
+              value: "2Gi"
+            - name: user
+              value: system
 
-      - name: output-sync
-        dependencies: [compute-aggregate]
-        templateRef:
-          namespace: default
-          name: sync-module
-          template: sync
-        arguments:
-          parameters:
-          - name: output_uri
-            value: /users/admin/test-10
-          - name: user
-            value: admin
+        - name: output-sync
+          dependencies: [compute-aggregate]
+          templateRef:
+            name: sync-module
+            template: sync
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: output_uri
+              value: /users/system/test-10
+            - name: user
+              value: system
 
-      - name: compute-read
-        dependencies: [output-sync]
-        templateRef:
-          namespace: default
-          name: compute-read-module
-          template: compute-read
-        arguments:
-          parameters:
-          - name: file
-            value: /users/admin/test-10/aggregate-file.txt
-          - name: cpu
-            value: "2"
-          - name: memory
-            value: "2Gi"
-          - name: user
-            value: admin
+        - name: compute-read
+          dependencies: [output-sync]
+          templateRef:
+            name: compute-read-module
+            template: compute-read
+            clusterScope: true
+          arguments:
+            parameters:
+            - name: file
+              value: /users/system/test-10/aggregate-file.txt
+            - name: cpu
+              value: "2"
+            - name: memory
+              value: "2Gi"
+            - name: user
+              value: system

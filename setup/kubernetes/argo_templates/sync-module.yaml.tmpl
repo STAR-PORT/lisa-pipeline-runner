@@ -1,8 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
-kind: WorkflowTemplate
+kind: ClusterWorkflowTemplate
 metadata:
   name: sync-module
-  namespace: default
 
 spec:
   templates:
@@ -22,7 +21,7 @@ spec:
 
     resource:
       action: create
-      setOwnerReference: true
+      setOwnerReference: false
       successCondition: status.succeeded == 1
       failureCondition: status.failed == 1
       manifest: |

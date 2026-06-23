@@ -14,9 +14,9 @@ spec:
       tasks:
       - name: input-sync
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: input_uri
@@ -27,9 +27,9 @@ spec:
       - name: compute-write
         dependencies: [input-sync]
         templateRef:
-          namespace: default
           name: compute-write-module
           template: compute-write
+          clusterScope: true
         arguments:
           parameters:
           - name: text
@@ -46,9 +46,9 @@ spec:
       - name: output-sync
         dependencies: [compute-write]
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: output_uri

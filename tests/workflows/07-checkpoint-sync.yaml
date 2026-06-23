@@ -17,9 +17,9 @@ spec:
 
       - name: input-sync
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: input_uri
@@ -30,9 +30,9 @@ spec:
       - name: compute-write
         dependencies: [input-sync]
         templateRef:
-          namespace: default
           name: compute-write-module
           template: compute-write
+          clusterScope: true
         arguments:
           parameters:
           - name: text
@@ -49,9 +49,9 @@ spec:
       - name: checkpoint-sync-1
         dependencies: [compute-write]
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: output_uri
@@ -62,9 +62,9 @@ spec:
       - name: compute-transform
         dependencies: [checkpoint-sync-1]
         templateRef:
-          namespace: default
           name: compute-transform-module
           template: compute-transform
+          clusterScope: true
         arguments:
           parameters:
           - name: input_file
@@ -81,9 +81,9 @@ spec:
       - name: checkpoint-sync-2
         dependencies: [compute-transform]
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: output_uri
@@ -94,9 +94,9 @@ spec:
       - name: compute-aggregate
         dependencies: [checkpoint-sync-2]
         templateRef:
-          namespace: default
           name: compute-aggregate-module
           template: compute-aggregate
+          clusterScope: true
         arguments:
           parameters:
           - name: input_dir
@@ -113,9 +113,9 @@ spec:
       - name: output-sync
         dependencies: [compute-aggregate]
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: output_uri

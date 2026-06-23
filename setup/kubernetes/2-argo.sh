@@ -29,18 +29,18 @@ for cmd in kubectl htpasswd openssl; do
   fi
 done
 
-echo "[1/7] Installing CNI (Calico) ..."
+echo "[1/10] Installing CNI (Calico) ..."
 kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
 
-echo "[2/7] Waiting for all cluster nodes to join..."
+echo "[2/10] Waiting for all cluster nodes to join..."
 kubectl wait --for=condition=Ready nodes --all --timeout=300s || true
-echo "[2/7] Node readiness check complete."
+echo "[2/10] Node readiness check complete."
 
 
-echo "[3/7] Disabling control-plane node taints (required for Argo on a single-node cluster) ..."
+echo "[3/10] Disabling control-plane node taints (required for Argo on a single-node cluster) ..."
 kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
 
-echo "[3/7] Installing Argo Workflows ..."
+echo "[4/10] Installing Argo Workflows ..."
 # Create namespace
 kubectl create namespace argo || true
 kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/install.yaml
@@ -54,7 +54,7 @@ ADMIN_BCRYPT="$(htpasswd -bnBC 10 "" "admin123" | tr -d ':\n')"
 DEX_CLIENT_SECRET="$(openssl rand -hex 32)"
 
 
-echo "[4/7] Generating self-signed TLS cert for Dex ..."
+echo "[5/10] Generating self-signed TLS cert for Dex ..."
 openssl req -x509 -nodes -newkey rsa:2048 \
   -keyout /tmp/dex-tls.key \
   -out    /tmp/dex-tls.crt \
@@ -70,7 +70,7 @@ kubectl create secret generic dex-tls -n argo \
 rm -f /tmp/dex-tls.crt /tmp/dex-tls.key
 
 
-echo "[5/7] Deploying Dex ..."
+echo "[6/10] Deploying Dex ..."
 
 kubectl apply -f - <<EOF
 apiVersion: v1
@@ -93,7 +93,7 @@ data:
     enablePasswordDB: true
     staticPasswords:
       - email: "admin@example.com"
-        hash: "${ADMIN_BCRYPT}" # if erroe put the hash directly here
+        hash: "${ADMIN_BCRYPT}"
         username: "admin"
         userID: "argo-admin-00001"
 
@@ -163,7 +163,7 @@ EOF
 kubectl wait --for=condition=Ready pod -l app=dex -n argo --timeout=120s
 
 
-echo "[5/7] Creating OAuth2 client secrets ..."
+echo "[7/10] Creating OAuth2 client secrets ..."
 
 kubectl create secret generic argo-workflows-sso -n argo \
   --from-literal=client-id=argo-workflows \
@@ -171,7 +171,7 @@ kubectl create secret generic argo-workflows-sso -n argo \
   --dry-run=client -o yaml | kubectl apply -f -
 
 
-echo "[6/7] Configuring Argo Server SSO ..."
+echo "[8/10] Configuring Argo Server SSO ..."
 
 kubectl create secret generic argo-workflows-sso -n argo \
   --from-literal=client-id=argo-workflows \
@@ -196,8 +196,7 @@ data:
     insecureSkipVerify: true
 "
 
-
-echo "[7/7] Exposing Argo Server with SSO ..."
+echo "[9/10] Exposing Argo Server with SSO ..."
 
 kubectl patch deployment argo-server -n argo --type=strategic -p '{
   "spec": {
@@ -217,7 +216,7 @@ kubectl patch deployment argo-server -n argo --type=strategic -p '{
             }
           }
         }]
-      ]
+      }
     }
   }
 }'
@@ -229,7 +228,9 @@ kubectl rollout restart deployment/argo-server -n argo
 kubectl rollout status deployment/argo-server -n argo --timeout=120s
 # kubectl get pods -n argo
 
+echo "[10/10] Creating RBAC roles and bindings ..."
 sudo kubectl apply -f - <<EOF
+# Role + binding for the default SA that runs user workflows
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -259,7 +260,81 @@ roleRef:
   kind: Role
   name: argo-workflow-role
   apiGroup: rbac.authorization.k8s.io
+---
+# SA that owns and executes the system CronWorkflow
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-system-scheduler
+  namespace: argo
+---
+# Give the service account permission to execute workflows in the argo namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-system-scheduler-binding
+  namespace: argo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argo-workflow-role
+subjects:
+- kind: ServiceAccount
+  name: argo-system-scheduler
+  namespace: argo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-system-scheduler-default-binding
+  namespace: default                          # permission is in default
+roleRef:
+  kind: Role
+  name: argo-workflow-role                    # reuse the existing role
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: argo-system-scheduler                 # SA lives in argo namespace
+  namespace: argo
+---
+# SA that SSO users are mapped to when viewing the argo namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argo-readonly
+  namespace: argo
+  annotations:
+    workflows.argoproj.io/rbac-rule: "true"          # matches all SSO users
+    workflows.argoproj.io/rbac-rule-precedence: "0"  # lowest precedence (fallback)
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: argo-readonly-role
+  namespace: argo
+rules:
+- apiGroups: ["argoproj.io"]
+  resources: ["workflows", "cronworkflows", "workflowtemplates"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: argo-readonly-binding
+  namespace: argo
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: argo-readonly-role
+subjects:
+- kind: ServiceAccount
+  name: argo-readonly
+  namespace: argo
 EOF
+
 
 echo ""
 echo "======================================================"

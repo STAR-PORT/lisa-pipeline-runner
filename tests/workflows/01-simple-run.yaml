@@ -15,9 +15,9 @@ spec:
 
       - name: compute
         templateRef:
-          namespace: default
           name: compute-simple-module
           template: compute-simple
+          clusterScope: true  
         arguments:
           parameters:
           - name: cpu

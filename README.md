@@ -20,8 +20,8 @@ This repository provides automated setup scripts and test utilities for deployin
   - `kubernetes/` - Kubernetes cluster deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
   
 - **tests/** - Test suites and validation
-  - `argo/` - Argo workflow templates and tests
-  - `pods/` - Kubernetes pod tests
+  - `datasets/` - test datasets for each workflow test
+  - `workflows/` - Argo workflow tests
 
 ## Setup
 
@@ -36,26 +36,18 @@ Run the setup scripts in order:
 
 ```bash
 # Global storage setup
-./setup/global_storage/main.sh
+sudo ./setup/global_storage/main.sh
 
 # For Kubernetes
-./setup/kubernetes/main.sh
+sudo ./setup/kubernetes/main.sh
 
 # For HPC
-./setup/hpc/main.sh
+sudo ./setup/hpc/main.sh
 ```
 Each setup subdirectory includes its own `README.md` and a `cleanup.sh` helper.
 
 ## Testing
 
 Run tests to validate your setup:
-
-```bash
-# Pod tests
-kubectl apply -f /tests/pods/interlink-test.sh
-kubectl apply -f /tests/pods/data-test.sh
-
-# Argo workflow tests
-kubectl apply -f /tests/argo/argo_template.yaml
-kubectl apply -f /tests/argo/argo_test.yaml
-```
+1. Add the files in `/tests/datasets` to the MinIO DB.
+2. Run the tests in `/tests/workflows` in the Argo UI.

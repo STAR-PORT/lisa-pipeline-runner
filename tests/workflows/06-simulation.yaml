@@ -17,9 +17,9 @@ spec:
 
       - name: input-sync
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: input_uri
@@ -30,9 +30,9 @@ spec:
       - name: compute-simulate
         dependencies: [input-sync]
         templateRef:
-          namespace: default
           name: compute-simulate-module
           template: compute-simulate
+          clusterScope: true
         arguments:
           parameters:
           - name: duration
@@ -43,9 +43,9 @@ spec:
       - name: output-sync
         dependencies: [compute-simulate]
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: output_uri

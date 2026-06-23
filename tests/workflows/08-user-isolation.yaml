@@ -17,9 +17,9 @@ spec:
 
       - name: input-sync-alice
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: input_uri
@@ -29,9 +29,9 @@ spec:
 
       - name: input-sync-system
         templateRef:
-          namespace: default
           name: sync-module
           template: sync
+          clusterScope: true
         arguments:
           parameters:
           - name: input_uri
@@ -42,9 +42,9 @@ spec:
       - name: compute-read-alice
         dependencies: [input-sync-alice]
         templateRef:
-          namespace: default
           name: compute-read-module
           template: compute-read
+          clusterScope: true
         arguments:
           parameters:
           - name: file
@@ -59,9 +59,9 @@ spec:
       - name: compute-write-alice
         dependencies: [input-sync-alice]
         templateRef:
-          namespace: default
           name: compute-write-module
           template: compute-write
+          clusterScope: true
         arguments:
           parameters:
           - name: text
@@ -74,9 +74,9 @@ spec:
       - name: compute-read-system
         dependencies: [input-sync-system]
         templateRef:
-          namespace: default
           name: compute-read-module
           template: compute-read
+          clusterScope: true
         arguments:
           parameters:
           - name: file
@@ -91,9 +91,9 @@ spec:
       - name: compute-write-system
         dependencies: [input-sync-system]
         templateRef:
-          namespace: default
           name: compute-write-module
           template: compute-write
+          clusterScope: true
         arguments:
           parameters:
           - name: text
