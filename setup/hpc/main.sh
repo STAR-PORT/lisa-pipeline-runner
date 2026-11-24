@@ -16,10 +16,7 @@ else
   exit 1
 fi
 
-echo "[STEP 1] Installing shared data tools"
-bash "$SCRIPT_DIR/2-data.sh"
-
-echo "[STEP 2] Running HPC bridge setup"
+echo "[STEP 1] Running HPC bridge setup"
 bash "$SCRIPT_DIR/1-bridge.sh"
 
 echo "HPC setup complete."

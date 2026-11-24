@@ -3,16 +3,12 @@ set -euo pipefail
 
 # Customizable environment variables:
 #   HPC_PROJECT_ROOT          - root path for project files (default: /projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner)
-#   HPC_DATA_DIR              - shared data root (default: ${HPC_PROJECT_ROOT}/data)
-#   HPC_TOOLS_DIR             - shared tools root (default: ${HPC_PROJECT_ROOT}/tools)
 #   HPC_USER                  - user to enable lingering for (default: current user)
 #   INTERLINK_SIDECAR_VERSION - InterLink sidecar release version (default: 0.6.1)
 #   INTERLINK_DIR             - InterLink install/config directory (default: ${HPC_PROJECT_ROOT}/.interlink)
 #   INTERLINK_DATA_ROOT       - job data root inside InterLink (default: ${INTERLINK_DIR}/jobs)
 
 HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
-HPC_DATA_DIR="${HPC_DATA_DIR:-${HPC_PROJECT_ROOT}/data}"
-HPC_TOOLS_DIR="${HPC_TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
 HPC_USER="${HPC_USER:-${USER:-$(whoami)}}"
 INTERLINK_SIDECAR_VERSION="${INTERLINK_SIDECAR_VERSION:-0.6.1}"
 INTERLINK_DIR="${INTERLINK_DIR:-${HPC_PROJECT_ROOT}/.interlink}"
@@ -40,13 +36,6 @@ SinfoPath: "/usr/bin/sinfo"
 ImagePrefix: "docker://"
 SingularityPath: "singularity"
 SingularityPrefix: ""
-SingularityDefaultOptions:
-  - "-B"
-  - "${HPC_DATA_DIR}/users:/users"
-  - "-B"
-  - "${HPC_DATA_DIR}/users/system:/users/system:ro"
-  - "-B"
-  - "${HPC_TOOLS_DIR}/mc:/usr/local/bin/mc"
 ExportPodData: true
 DataRootFolder: "${INTERLINK_DATA_ROOT}/"
 Namespace: "vk"

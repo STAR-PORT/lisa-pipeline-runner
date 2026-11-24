@@ -16,15 +16,22 @@ ARGO_VERSION="${ARGO_VERSION:-v3.7.12}"
 CALICO_VERSION="${CALICO_VERSION:-v3.28.0}"
 DEX_VERSION="${DEX_VERSION:-v2.37.0}"
 MACHINE_HOST="${MACHINE_HOST:-${K8S_NODE_IP:-127.0.0.1}}"
-OBJECT_STORE_VERSION="${OBJECT_STORE_VERSION:-RELEASE.2025-08-13T08-35-41Z}"
-OBJECT_STORE_DATA_DIR="${OBJECT_STORE_DATA_DIR:-/var/lib/lisa-object-store}"
+GARAGE_IMAGE="${GARAGE_IMAGE:-dxflrs/garage:v2.5.0}"
+GARAGE_DATA_DIR="${GARAGE_DATA_DIR:-/var/lib/lisa-garage}"
 OBJECT_STORE_NODE_PORT="${OBJECT_STORE_NODE_PORT:-30900}"
-OBJECT_STORE_CONSOLE_NODE_PORT="${OBJECT_STORE_CONSOLE_NODE_PORT:-30901}"
-OBJECT_STORE_ACCESS_KEY="${OBJECT_STORE_ACCESS_KEY:-lisa-admin}"
-OBJECT_STORE_SECRET_KEY="${OBJECT_STORE_SECRET_KEY:-lisa-admin-secret}"
+OBJECT_STORE_BUCKET="${OBJECT_STORE_BUCKET:-lisa}"
+OBJECT_STORE_ACCESS_KEY="${OBJECT_STORE_ACCESS_KEY:-}"
+OBJECT_STORE_SECRET_KEY="${OBJECT_STORE_SECRET_KEY:-}"
+HPC_FORWARD_BIND_ADDRESS="${HPC_FORWARD_BIND_ADDRESS:-10.1.0.2}"
+OBJECT_STORE_FORWARD_PORT="${OBJECT_STORE_FORWARD_PORT:-19001}"
 
 if [[ -z "${ARGO_ADMIN_PASSWORD:-}" ]]; then
   echo "ARGO_ADMIN_PASSWORD must be set in setup/kubernetes/.env or the environment." >&2
+  exit 1
+fi
+
+if [[ -z "$OBJECT_STORE_ACCESS_KEY" || -z "$OBJECT_STORE_SECRET_KEY" ]]; then
+  echo "OBJECT_STORE_ACCESS_KEY and OBJECT_STORE_SECRET_KEY must be set." >&2
   exit 1
 fi
 
@@ -60,16 +67,49 @@ kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/dow
 kubectl wait --for=condition=Ready pods --all -n argo --timeout=300s || true
 # same as > sudo kubectl get pods -n argo
 
-echo "[5/11] Deploying cluster-local object storage ..."
-mkdir -p "$OBJECT_STORE_DATA_DIR"
-chown 1000:1000 "$OBJECT_STORE_DATA_DIR"
-chmod 750 "$OBJECT_STORE_DATA_DIR"
-kubectl create secret generic lisa-object-store -n default \
-  --from-literal=access-key="$OBJECT_STORE_ACCESS_KEY" \
-  --from-literal=secret-key="$OBJECT_STORE_SECRET_KEY" \
+echo "[5/11] Deploying Garage S3 storage ..."
+mkdir -p "$GARAGE_DATA_DIR/meta" "$GARAGE_DATA_DIR/data"
+chown -R 1000:1000 "$GARAGE_DATA_DIR"
+chmod 750 "$GARAGE_DATA_DIR" "$GARAGE_DATA_DIR/meta" "$GARAGE_DATA_DIR/data"
+
+EXISTING_GARAGE_RPC_SECRET="$(kubectl get secret lisa-garage-runtime -n default -o jsonpath='{.data.rpc-secret}' 2>/dev/null | base64 --decode 2>/dev/null || true)"
+EXISTING_GARAGE_ADMIN_TOKEN="$(kubectl get secret lisa-garage-runtime -n default -o jsonpath='{.data.admin-token}' 2>/dev/null | base64 --decode 2>/dev/null || true)"
+GARAGE_RPC_SECRET="${GARAGE_RPC_SECRET:-${EXISTING_GARAGE_RPC_SECRET:-$(openssl rand -hex 32)}}"
+GARAGE_ADMIN_TOKEN="${GARAGE_ADMIN_TOKEN:-${EXISTING_GARAGE_ADMIN_TOKEN:-$(openssl rand -base64 32)}}"
+
+kubectl create secret generic lisa-object-store-credentials -n default \
+  --from-literal=accessKey="$OBJECT_STORE_ACCESS_KEY" \
+  --from-literal=secretKey="$OBJECT_STORE_SECRET_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret generic lisa-garage-runtime -n default \
+  --from-literal=rpc-secret="$GARAGE_RPC_SECRET" \
+  --from-literal=admin-token="$GARAGE_ADMIN_TOKEN" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lisa-garage-config
+  namespace: default
+data:
+  garage.toml: |
+    metadata_dir = "/var/lib/garage/meta"
+    data_dir = "/var/lib/garage/data"
+    db_engine = "sqlite"
+    replication_factor = 1
+    rpc_bind_addr = "[::]:3901"
+    rpc_public_addr = "127.0.0.1:3901"
+
+    [s3_api]
+    api_bind_addr = "[::]:3900"
+    s3_region = "garage"
+
+    [admin]
+    api_bind_addr = "[::]:3903"
+    metrics_require_token = true
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -86,36 +126,71 @@ spec:
         app: lisa-object-store
     spec:
       containers:
-      - name: minio
-        image: minio/minio:${OBJECT_STORE_VERSION}
-        args: ["server", "/data", "--console-address", ":9001"]
+      - name: garage
+        image: ${GARAGE_IMAGE}
+        command: ["/garage"]
+        args: ["server", "--single-node", "--default-bucket"]
         securityContext:
           runAsUser: 1000
           runAsGroup: 1000
         env:
-        - name: MINIO_ROOT_USER
+        - name: GARAGE_CONFIG_FILE
+          value: /etc/garage.toml
+        - name: GARAGE_DEFAULT_BUCKET
+          value: "${OBJECT_STORE_BUCKET}"
+        - name: GARAGE_DEFAULT_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: lisa-object-store
-              key: access-key
-        - name: MINIO_ROOT_PASSWORD
+              name: lisa-object-store-credentials
+              key: accessKey
+        - name: GARAGE_DEFAULT_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: lisa-object-store
-              key: secret-key
+              name: lisa-object-store-credentials
+              key: secretKey
+        - name: GARAGE_RPC_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: lisa-garage-runtime
+              key: rpc-secret
+        - name: GARAGE_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: lisa-garage-runtime
+              key: admin-token
         ports:
-        - name: api
-          containerPort: 9000
-        - name: console
-          containerPort: 9001
+        - name: s3
+          containerPort: 3900
+        - name: rpc
+          containerPort: 3901
+        - name: admin
+          containerPort: 3903
         volumeMounts:
+        - name: metadata
+          mountPath: /var/lib/garage/meta
         - name: data
-          mountPath: /data
+          mountPath: /var/lib/garage/data
+        - name: config
+          mountPath: /etc/garage.toml
+          subPath: garage.toml
+          readOnly: true
+        readinessProbe:
+          tcpSocket:
+            port: s3
+          initialDelaySeconds: 5
+          periodSeconds: 5
       volumes:
+      - name: metadata
+        hostPath:
+          path: ${GARAGE_DATA_DIR}/meta
+          type: DirectoryOrCreate
       - name: data
         hostPath:
-          path: ${OBJECT_STORE_DATA_DIR}
+          path: ${GARAGE_DATA_DIR}/data
           type: DirectoryOrCreate
+      - name: config
+        configMap:
+          name: lisa-garage-config
 ---
 apiVersion: v1
 kind: Service
@@ -127,16 +202,56 @@ spec:
   selector:
     app: lisa-object-store
   ports:
-  - name: api
-    port: 9000
-    targetPort: api
+  - name: s3
+    port: 3900
+    targetPort: s3
     nodePort: ${OBJECT_STORE_NODE_PORT}
-  - name: console
-    port: 9001
-    targetPort: console
-    nodePort: ${OBJECT_STORE_CONSOLE_NODE_PORT}
 EOF
-kubectl rollout status deployment/lisa-object-store -n default --timeout=180s
+kubectl rollout status deployment/lisa-object-store -n default --timeout=300s
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-repositories
+  namespace: default
+  annotations:
+    workflows.argoproj.io/default-artifact-repository: garage-local
+data:
+  garage-local: |
+    s3:
+      endpoint: lisa-object-store.default.svc.cluster.local:3900
+      bucket: ${OBJECT_STORE_BUCKET}
+      region: garage
+      insecure: true
+      addressingStyle: path
+      accessKeySecret:
+        name: lisa-object-store-credentials
+        key: accessKey
+      secretKeySecret:
+        name: lisa-object-store-credentials
+        key: secretKey
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: artifact-repositories-hpc
+  namespace: default
+data:
+  garage-hpc: |
+    s3:
+      endpoint: ${HPC_FORWARD_BIND_ADDRESS}:${OBJECT_STORE_FORWARD_PORT}
+      bucket: ${OBJECT_STORE_BUCKET}
+      region: garage
+      insecure: true
+      addressingStyle: path
+      accessKeySecret:
+        name: lisa-object-store-credentials
+        key: accessKey
+      secretKeySecret:
+        name: lisa-object-store-credentials
+        key: secretKey
+EOF
 
 ADMIN_BCRYPT="$(printf '%s\n' "$ARGO_ADMIN_PASSWORD" | htpasswd -nBC 10 -i "" | tr -d ':\n')"
 

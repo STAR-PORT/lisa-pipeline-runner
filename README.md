@@ -4,18 +4,18 @@ A setup and testing framework for a laptop-hosted Kubernetes cluster connected t
 
 ## Overview
 
-The Kubernetes/Argo cluster runs in a VM on the laptop. The InterLink Slurm sidecar runs on Deucalion. An SSH connection initiated from the VM keeps the sidecar reachable and reverse-forwards the VM's Kubernetes API and local MinIO service to the Deucalion login node's internal address.
+The Kubernetes/Argo cluster runs in a VM on the laptop. The InterLink Slurm sidecar runs on Deucalion. Garage provides S3-compatible object storage in the VM. The VM-initiated SSH tunnel exposes Garage and the Kubernetes API to the Deucalion login node for remote Workflow pods.
 
 ## Important Notes
 - Set the VM's stable private interface address and Deucalion login-node internal address in the example configuration before setup.
-- The example MinIO credentials are placeholders. Replace them before exposing the reverse-forwarded service.
+- The example Garage access key and secret are placeholders. Replace them before exposing the reverse-forwarded service.
 - Keep the SSH reverse-forward session running while workflows are using Deucalion.
 
 ## Directory Structure
 
 - **setup/** - Infrastructure setup scripts
   - `hpc/` - High-Performance Computing deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
-  - `kubernetes/` - Kubernetes, Argo, cluster-local MinIO, and InterLink setup
+  - `kubernetes/` - Kubernetes, Argo, Garage, and InterLink setup
   
 - **tests/** - Test suites and validation
   - `datasets/` - test datasets for each workflow test
@@ -45,8 +45,8 @@ cp setup/hpc/.env.example setup/hpc/.env
 bash setup/hpc/main.sh
 ```
 
-The Kubernetes setup starts a persistent SSH tunnel from the VM to Deucalion. It forwards the sidecar connection locally and exposes the VM's Kubernetes API on port `19002` and MinIO on port `19001` at the configured login-node internal address.
+The Kubernetes setup starts a persistent SSH tunnel from the VM to Deucalion. It forwards the sidecar connection locally and exposes the VM's Kubernetes API on port `19002` and Garage's S3 API on port `19001` at the configured login-node internal address.
 
 ## Testing
 
-See [tests/README.md](tests/README.md) for loading the sample datasets into cluster-local MinIO and running the Argo workflows.
+See [tests/README.md](tests/README.md) for running the Garage artifact round-trip workflow on InterLink.

@@ -2,7 +2,6 @@
 
 This directory contains the Deucalion-side InterLink Slurm setup. `main.sh` loads `setup/hpc/.env` and runs:
 
-- `setup/hpc/2-data.sh` — installs the MinIO client and creates shared data paths
 - `setup/hpc/1-bridge.sh` — installs and starts the InterLink Slurm sidecar
 
 ## Usage
@@ -23,8 +22,8 @@ bash setup/hpc/main.sh
 
 ## Notes
 
-- Job containers share `/users` from the configured HPC data directory and have the `mc` client mounted at `/usr/local/bin/mc`.
-- The old job wrapper and global-storage credentials are no longer used. Argo's sync module transfers data directly to/from cluster-local MinIO over the SSH reverse forward.
+- Workflow pods use Argo's native artifact init/wait containers to pull and push data to Garage over the SSH reverse forward.
+- The standard setup installs no S3 client or custom data-sync wrapper on Deucalion.
 
 
 ## Cleanup

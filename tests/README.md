@@ -1,20 +1,16 @@
 
-# Workflow Tests
+# Workflow Test
 
-The sample workflows use the `lisa` bucket in the MinIO instance deployed with the Kubernetes cluster. From a machine that can reach the VM's private address, configure the MinIO client with the credentials in `setup/kubernetes/.env` and seed the sample files:
+`11-interlink-stress.yaml` tests the native Argo artifact lifecycle against Garage without pre-seeding data:
 
-```sh
-mc alias set lisa-local http://<K8S_NODE_IP>:30900 <OBJECT_STORE_ACCESS_KEY> <OBJECT_STORE_SECRET_KEY>
-mc mb --ignore-existing lisa-local/lisa
-mc mirror tests/datasets/users lisa-local/lisa/users
-```
+1. A pod on `interlink-node` writes an input file; Argo's `wait` container uploads it.
+2. A second InterLink pod receives the file through Argo's `init` container, runs a bounded stress test, and has its output uploaded by `wait`.
+3. A third InterLink pod pulls that output through `init` and verifies it.
 
-Keep the VM-to-Deucalion SSH tunnel running, then submit the workflows in `tests/workflows` through the Argo UI. Remote sync jobs reach MinIO at `http://<login-node-internal-address>:19001`; the Kubernetes API is reverse-forwarded at `https://<login-node-internal-address>:19002` for authenticated internal clients.
-
-## InterLink-only stress test
-
-`11-interlink-stress.yaml` is self-contained and does not use object storage. It fans out three bounded CPU/memory Argo pods to the `interlink-node` by default. Update its Slurm account, partition, and reverse-forward API host/port parameters to match your setup, then submit it with:
+Keep the VM-to-Deucalion SSH tunnel running. Update the workflow's Slurm account, partition, and reverse-forward API host/port parameters to match your setup, then submit it:
 
 ```sh
 kubectl create -f tests/workflows/11-interlink-stress.yaml
 ```
+
+The workflow selects the `artifact-repositories-hpc` ConfigMap, whose S3 endpoint is `http://<login-node-internal-address>:19001`. The default `artifact-repositories` ConfigMap points to Garage's cluster Service for future workflows that perform ingestion inside Kubernetes.
