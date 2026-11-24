@@ -3,7 +3,7 @@
 #
 # Customizable environment variables:
 #   ARGO_VERSION        - Argo Workflows release tag (default: v3.7.12)
-#   CALICO_VERSION      - Calico manifest version (default: v3.28.0)
+#   CALICO_VERSION      - Calico manifest version (default: v3.33.1)
 #   DEX_VERSION         - Dex release version (default: v2.37.0)
 #   MACHINE_HOST        - Machine IP for Argo Server access (default: K8S_NODE_IP)
 # Example:
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 ARGO_VERSION="${ARGO_VERSION:-v3.7.12}"
-CALICO_VERSION="${CALICO_VERSION:-v3.28.0}"
+CALICO_VERSION="${CALICO_VERSION:-v3.33.1}"
 DEX_VERSION="${DEX_VERSION:-v2.37.0}"
 MACHINE_HOST="${MACHINE_HOST:-${K8S_NODE_IP:-127.0.0.1}}"
 GARAGE_IMAGE="${GARAGE_IMAGE:-dxflrs/garage:v2.5.0}"
