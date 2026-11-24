@@ -11,9 +11,12 @@
 #  SIDECAR_SSH_USER          - SSH username for connecting to the HPC sidecar
 #  SIDECAR_SSH_HOST          - SSH host for connecting to the HPC sidecar
 #  SIDECAR_SSH_KEY_PATH      - SSH private key path for the remote host (default: /root/.ssh/id_ed25519)
-#  SIDECAR_LOCAL_HOST        - Local interface to bind the SSH tunnel (default: 10.227.208.123)
+#  SIDECAR_LOCAL_HOST        - Local interface to bind the SSH tunnel (default: 127.0.0.1)
 #  SIDECAR_LOCAL_PORT        - Local port for the SSH tunnel (default: 5000)
 #  SIDECAR_REMOTE_PORT       - Remote port for the SSH tunnel (default: 4000)
+#  HPC_FORWARD_BIND_ADDRESS  - Deucalion login-node internal address (default: 10.1.0.2)
+#  OBJECT_STORE_FORWARD_PORT - Reverse-forward port for MinIO (default: 19001)
+#  K8S_API_FORWARD_PORT      - Reverse-forward port for the Kubernetes API (default: 19002)
 #  INTERLINK_DATA_ROOT       - Root directory for InterLink data (default: /tmp/interlink)
 #  INTERLINK_NODE_NAME       - Kubernetes node name for the Virtual Kubelet (default: interlink-node)
 #
@@ -27,9 +30,14 @@ INTERLINK_VERSION="${INTERLINK_VERSION:-0.6.1}"
 SIDECAR_SSH_USER="${SIDECAR_SSH_USER:-isabelmoutinho}"
 SIDECAR_SSH_HOST="${SIDECAR_SSH_HOST:-ln01.deucalion.macc.fccn.pt}"
 SIDECAR_SSH_KEY_PATH="${SIDECAR_SSH_KEY_PATH:-/root/.ssh/id_ed25519}"
-SIDECAR_LOCAL_HOST="${SIDECAR_LOCAL_HOST:-10.227.208.123}"
+SIDECAR_LOCAL_HOST="${SIDECAR_LOCAL_HOST:-127.0.0.1}"
 SIDECAR_LOCAL_PORT="${SIDECAR_LOCAL_PORT:-5000}"
 SIDECAR_REMOTE_PORT="${SIDECAR_REMOTE_PORT:-4000}"
+HPC_FORWARD_BIND_ADDRESS="${HPC_FORWARD_BIND_ADDRESS:-10.1.0.2}"
+OBJECT_STORE_FORWARD_PORT="${OBJECT_STORE_FORWARD_PORT:-19001}"
+OBJECT_STORE_NODE_PORT="${OBJECT_STORE_NODE_PORT:-30900}"
+K8S_API_FORWARD_PORT="${K8S_API_FORWARD_PORT:-19002}"
+K8S_NODE_IP="${K8S_NODE_IP:-$(ip -4 route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}')}"
 INTERLINK_DATA_ROOT="${INTERLINK_DATA_ROOT:-/tmp/interlink}"
 INTERLINK_NODE_NAME="${INTERLINK_NODE_NAME:-interlink-node}"
 
@@ -132,7 +140,10 @@ After=network.target
 ExecStart=/usr/bin/ssh -o ServerAliveInterval=60 -o ExitOnForwardFailure=yes \
     -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
     -i ${SIDECAR_SSH_KEY_PATH} \
-    -N -L ${SIDECAR_LOCAL_HOST}:${SIDECAR_LOCAL_PORT}:localhost:${SIDECAR_REMOTE_PORT} \
+    -N \
+    -L ${SIDECAR_LOCAL_HOST}:${SIDECAR_LOCAL_PORT}:127.0.0.1:${SIDECAR_REMOTE_PORT} \
+    -R ${HPC_FORWARD_BIND_ADDRESS}:${OBJECT_STORE_FORWARD_PORT}:${K8S_NODE_IP}:${OBJECT_STORE_NODE_PORT} \
+    -R ${HPC_FORWARD_BIND_ADDRESS}:${K8S_API_FORWARD_PORT}:${K8S_NODE_IP}:6443 \
     ${SIDECAR_SSH_USER}@${SIDECAR_SSH_HOST}
 Restart=always
 RestartSec=5

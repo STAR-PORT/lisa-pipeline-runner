@@ -3,26 +3,19 @@ set -euo pipefail
 
 # Customizable environment variables:
 #   HPC_PROJECT_ROOT          - root path for project files (default: /projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner)
+#   HPC_DATA_DIR              - shared data root (default: ${HPC_PROJECT_ROOT}/data)
+#   HPC_TOOLS_DIR             - shared tools root (default: ${HPC_PROJECT_ROOT}/tools)
 #   HPC_USER                  - user to enable lingering for (default: current user)
-#   HPC_WORK                  - local work path for auxiliary tools (default: $HOME/work)
-#   HPC_USER_HOME             - home directory of the HPC user (default: $HOME)
 #   INTERLINK_SIDECAR_VERSION - InterLink sidecar release version (default: 0.6.1)
 #   INTERLINK_DIR             - InterLink install/config directory (default: ${HPC_PROJECT_ROOT}/.interlink)
-#   SYNC_SCRIPT_DIR           - path for sync scripts (default: ${HPC_PROJECT_ROOT}/sync)
-#   TSOCKS_PATH               - tsocks library path (default: ${HPC_WORK}/tsocks-1.8beta5+ds1/libtsocks.so)
-#   TSOCKS_LOGIN_NODE         - login node host name (default: login01)
 #   INTERLINK_DATA_ROOT       - job data root inside InterLink (default: ${INTERLINK_DIR}/jobs)
 
-# Load runtime configuration from the wrapper if available.
 HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
+HPC_DATA_DIR="${HPC_DATA_DIR:-${HPC_PROJECT_ROOT}/data}"
+HPC_TOOLS_DIR="${HPC_TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
 HPC_USER="${HPC_USER:-${USER:-$(whoami)}}"
-HPC_WORK="${HPC_WORK:-${WORK:-$HOME/work}}"
-HPC_USER_HOME="${HPC_USER_HOME:-$HOME}"
 INTERLINK_SIDECAR_VERSION="${INTERLINK_SIDECAR_VERSION:-0.6.1}"
 INTERLINK_DIR="${INTERLINK_DIR:-${HPC_PROJECT_ROOT}/.interlink}"
-SYNC_SCRIPT_DIR="${SYNC_SCRIPT_DIR:-${HPC_PROJECT_ROOT}/sync}"
-TSOCKS_PATH="${TSOCKS_PATH:-${HPC_WORK}/tsocks-1.8beta5+ds1/libtsocks.so}"
-TSOCKS_LOGIN_NODE="${TSOCKS_LOGIN_NODE:-login01}"
 INTERLINK_DATA_ROOT="${INTERLINK_DATA_ROOT:-${INTERLINK_DIR}/jobs}"
 
 echo "[1/6] Preparing InterLink directory"
@@ -44,19 +37,19 @@ SbatchPath: "/usr/bin/sbatch"
 ScancelPath: "/usr/bin/scancel"
 SqueuePath: "/usr/bin/squeue"
 SinfoPath: "/usr/bin/sinfo"
-CommandPrefix: "${SYNC_SCRIPT_DIR}/sync-data.sh"
 ImagePrefix: "docker://"
 SingularityPath: "singularity"
 SingularityPrefix: ""
 SingularityDefaultOptions:
   - "-B"
-  - "${HPC_PROJECT_ROOT}/data/users/system:/users/system:ro"
+  - "${HPC_DATA_DIR}/users:/users"
+  - "-B"
+  - "${HPC_DATA_DIR}/users/system:/users/system:ro"
+  - "-B"
+  - "${HPC_TOOLS_DIR}/mc:/usr/local/bin/mc"
 ExportPodData: true
 DataRootFolder: "${INTERLINK_DATA_ROOT}/"
 Namespace: "vk"
-Tsocks: false
-TsocksPath: "${TSOCKS_PATH}"
-TsocksLoginNode: "${TSOCKS_LOGIN_NODE}"
 BashPath: /bin/bash
 VerboseLogging: true
 ErrorsOnlyLogging: false

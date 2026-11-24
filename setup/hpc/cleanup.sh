@@ -9,11 +9,11 @@ if [[ -f "$CONFIG_FILE" ]]; then
   source "$CONFIG_FILE"
 fi
 
-HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075}"
+HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
 INTERLINK_DIR="${INTERLINK_DIR:-${HPC_PROJECT_ROOT}/.interlink}"
 SYNC_DIR="${SYNC_DIR:-${HPC_PROJECT_ROOT}/sync}"
-TOOLS_DIR="${TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
-DATA_DIR="${DATA_DIR:-${HPC_PROJECT_ROOT}/data}"
+HPC_TOOLS_DIR="${HPC_TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
+HPC_DATA_DIR="${HPC_DATA_DIR:-${HPC_PROJECT_ROOT}/data}"
 
 if [ "$(id -u)" -eq 0 ]; then
   echo "This cleanup should be run as the same user that installed the HPC services, not as root."
@@ -29,7 +29,7 @@ echo "[2/4] Removing user service files"
 rm -f ~/.config/systemd/user/interlink-sidecar.service ~/.config/systemd/user/sync-daemon.service
 
 echo "[3/4] Removing runtime directories"
-rm -rf "$INTERLINK_DIR" "$SYNC_DIR" "$DATA_DIR" "$TOOLS_DIR"
+rm -rf "$INTERLINK_DIR" "$SYNC_DIR" "$HPC_DATA_DIR" "$HPC_TOOLS_DIR"
 
 echo "[4/4] Cleanup complete"
 echo "Removed HPC InterLink and sync setup directories."

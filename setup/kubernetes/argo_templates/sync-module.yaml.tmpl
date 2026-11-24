@@ -52,7 +52,42 @@ spec:
                 image: ubuntu:22.04
                 command: ["bash", "-c"]
                 args:
-                - "echo 'sync module' && echo 'wrapper handles synchronization'"
+                - |
+                  set -euo pipefail
+
+                  mc alias set cluster-store "$OBJECT_STORE_ENDPOINT" \
+                    "$OBJECT_STORE_ACCESS_KEY" "$OBJECT_STORE_SECRET_KEY"
+                  mc mb --ignore-existing "cluster-store/$OBJECT_STORE_BUCKET"
+
+                  validate_path() {
+                    local path="$1"
+                    if [[ "$path" == *".."* ]]; then
+                      echo "invalid data path: $path" >&2
+                      exit 1
+                    fi
+                    case "$path" in
+                      "/users/$ARGO_USER"|"/users/$ARGO_USER/"*|"/users/system"|"/users/system/"*) ;;
+                      *)
+                        echo "data path is outside the user's storage: $path" >&2
+                        exit 1
+                        ;;
+                    esac
+                  }
+
+                  if [[ -n "$INPUT_URI" ]]; then
+                    validate_path "$INPUT_URI"
+                    mkdir -p "$INPUT_URI"
+                    mc mirror --overwrite \
+                      "cluster-store/$OBJECT_STORE_BUCKET/${INPUT_URI#/}" \
+                      "$INPUT_URI"
+                  fi
+
+                  if [[ -n "$OUTPUT_URI" ]]; then
+                    validate_path "$OUTPUT_URI"
+                    mc mirror --overwrite \
+                      "$OUTPUT_URI" \
+                      "cluster-store/$OBJECT_STORE_BUCKET/${OUTPUT_URI#/}"
+                  fi
                 env:
                 - name: INPUT_URI
                   value: "{{inputs.parameters.input_uri}}"
@@ -60,6 +95,20 @@ spec:
                   value: "{{inputs.parameters.output_uri}}"
                 - name: ARGO_USER
                   value: "{{inputs.parameters.user}}"
+                - name: OBJECT_STORE_ENDPOINT
+                  value: "${OBJECT_STORE_ENDPOINT}"
+                - name: OBJECT_STORE_BUCKET
+                  value: "${OBJECT_STORE_BUCKET}"
+                - name: OBJECT_STORE_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: lisa-object-store
+                      key: access-key
+                - name: OBJECT_STORE_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: lisa-object-store
+                      key: secret-key
                 resources:
                   requests:
                     cpu: "1"

@@ -1,0 +1,117 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  namespace: default
+  generateName: test-11-interlink-stress-
+  labels:
+    test: "11-interlink-stress"
+spec:
+  entrypoint: pipeline
+  podGC:
+    strategy: OnPodSuccess
+  arguments:
+    parameters:
+    - name: slurm-account
+      value: "F202500007HPCVLABUPORTOX"
+    - name: slurm-partition
+      value: "normal-x86"
+    - name: parallel-modules
+      value: "3"
+    - name: cpus-per-task
+      value: "1"
+    - name: memory
+      value: "256M"
+    - name: vm-bytes
+      value: "192M"
+    - name: duration
+      value: "30s"
+    - name: kubernetes-api-host
+      value: "10.1.0.2"
+    - name: kubernetes-api-port
+      value: "19002"
+  templates:
+  - name: pipeline
+    dag:
+      tasks:
+      - name: stress
+        template: interlink-stress
+        arguments:
+          parameters:
+          - name: worker-index
+            value: "{{item}}"
+        withSequence:
+          count: "{{workflow.parameters.parallel-modules}}"
+
+  - name: interlink-stress
+    inputs:
+      parameters:
+      - name: worker-index
+    metadata:
+      annotations:
+        slurm-job.vk.io/flags: >-
+          --account={{workflow.parameters.slurm-account}}
+          --partition={{workflow.parameters.slurm-partition}}
+          --cpus-per-task={{workflow.parameters.cpus-per-task}}
+          --mem={{workflow.parameters.memory}}
+    nodeSelector:
+      kubernetes.io/hostname: interlink-node
+    tolerations:
+    - key: virtual-node.interlink/no-schedule
+      operator: Exists
+    podSpecPatch: |
+      hostAliases:
+      - ip: "{{workflow.parameters.kubernetes-api-host}}"
+        hostnames:
+        - kubernetes.default.svc
+      initContainers:
+      - name: init
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: kubernetes.default.svc
+        - name: KUBERNETES_SERVICE_PORT
+          value: "{{workflow.parameters.kubernetes-api-port}}"
+        - name: KUBERNETES_SERVICE_PORT_HTTPS
+          value: "{{workflow.parameters.kubernetes-api-port}}"
+      containers:
+      - name: main
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: kubernetes.default.svc
+        - name: KUBERNETES_SERVICE_PORT
+          value: "{{workflow.parameters.kubernetes-api-port}}"
+        - name: KUBERNETES_SERVICE_PORT_HTTPS
+          value: "{{workflow.parameters.kubernetes-api-port}}"
+      - name: wait
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: kubernetes.default.svc
+        - name: KUBERNETES_SERVICE_PORT
+          value: "{{workflow.parameters.kubernetes-api-port}}"
+        - name: KUBERNETES_SERVICE_PORT_HTTPS
+          value: "{{workflow.parameters.kubernetes-api-port}}"
+    container:
+      image: colinianking/stress-ng
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        set -euo pipefail
+        echo "Starting worker {{inputs.parameters.worker-index}} on $(hostname)"
+        stress-ng \
+          --cpu 1 \
+          --cpu-load 100 \
+          --vm 1 \
+          --vm-bytes "{{workflow.parameters.vm-bytes}}" \
+          --timeout "{{workflow.parameters.duration}}" \
+          --metrics-brief
+        dd if=/dev/zero \
+          of="/tmp/stress-output-{{inputs.parameters.worker-index}}.bin" \
+          bs=1M count=8 status=none
+        test "$(wc -c < "/tmp/stress-output-{{inputs.parameters.worker-index}}.bin")" -eq 8388608
+        echo "Worker {{inputs.parameters.worker-index}} completed"
+      resources:
+        requests:
+          cpu: "{{workflow.parameters.cpus-per-task}}"
+          memory: "{{workflow.parameters.memory}}"
+        limits:
+          cpu: "{{workflow.parameters.cpus-per-task}}"
+          memory: "{{workflow.parameters.memory}}"

@@ -1,10 +1,9 @@
 # HPC Setup
 
-This directory contains HPC-side setup scripts for the LISA pipeline.
-The main entrypoint is `setup/hpc/main.sh`, which loads user overrides from `setup/hpc/.env` and runs:
+This directory contains the Deucalion-side InterLink Slurm setup. `main.sh` loads `setup/hpc/.env` and runs:
 
-- `setup/hpc/1-bridge.sh`
-- `setup/hpc/2-data.sh`
+- `setup/hpc/2-data.sh` — installs the MinIO client and creates shared data paths
+- `setup/hpc/1-bridge.sh` — installs and starts the InterLink Slurm sidecar
 
 ## Usage
 
@@ -16,7 +15,7 @@ cp setup/hpc/.env.example setup/hpc/.env
 
 2. Edit `setup/hpc/.env` with your environment-specific values.
 
-3. Run the wrapper script:
+3. Run the setup script as your Deucalion user:
 
 ```sh
 bash setup/hpc/main.sh
@@ -24,9 +23,8 @@ bash setup/hpc/main.sh
 
 ## Notes
 
-- The wrapper loads values from `.env` if provided.
-- Each stage script still keeps its own default values for missing variables.
-- This setup supports custom project paths, InterLink release links, MinIO credentials, and user names.
+- Job containers share `/users` from the configured HPC data directory and have the `mc` client mounted at `/usr/local/bin/mc`.
+- The old job wrapper and global-storage credentials are no longer used. Argo's sync module transfers data directly to/from cluster-local MinIO over the SSH reverse forward.
 
 
 ## Cleanup

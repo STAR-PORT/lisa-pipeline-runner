@@ -1,23 +1,21 @@
 # LISA Pipeline Runner
 
-A setup and testing framework for the LISA pipeline infrastructure, supporting Kubernetes, HPC, and cloud storage configurations.
+A setup and testing framework for a laptop-hosted Kubernetes cluster connected to the Deucalion HPC plugin.
 
 ## Overview
 
-This repository provides automated setup scripts and test utilities for deploying and validating the LISA pipeline across different infrastructure environments.
+The Kubernetes/Argo cluster runs in a VM on the laptop. The InterLink Slurm sidecar runs on Deucalion. An SSH connection initiated from the VM keeps the sidecar reachable and reverse-forwards the VM's Kubernetes API and local MinIO service to the Deucalion login node's internal address.
 
 ## Important Notes
-- This repository currently contains placeholder account keys only.
-- Personal account key files required by the code are not present in the repository, so it is not possible to fully replicate the setup.
-- The values shown in the scripts are not the real MinIO credentials and should be replaced with valid keys before running the storage setup and access.
-> Later there will be variables for defining this account specific files.
+- Set the VM's stable private interface address and Deucalion login-node internal address in the example configuration before setup.
+- The example MinIO credentials are placeholders. Replace them before exposing the reverse-forwarded service.
+- Keep the SSH reverse-forward session running while workflows are using Deucalion.
 
 ## Directory Structure
 
 - **setup/** - Infrastructure setup scripts
-  - `global_storage/` - Cloud storage deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
   - `hpc/` - High-Performance Computing deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
-  - `kubernetes/` - Kubernetes cluster deployment. Contains `README.md`, `main.sh`, `cleanup.sh`, and `.env.example`
+  - `kubernetes/` - Kubernetes, Argo, cluster-local MinIO, and InterLink setup
   
 - **tests/** - Test suites and validation
   - `datasets/` - test datasets for each workflow test
@@ -26,28 +24,29 @@ This repository provides automated setup scripts and test utilities for deployin
 ## Setup
 
 ### Prerequisites
-- Kubernetes cluster machine access (ssh)
-- HPC environment access (ssh)
-- Access to cloud storage credentials
+- Debian-based Kubernetes VM on the laptop
+- SSH access to the Deucalion login node and Slurm account
+- Deucalion login-node internal bind address (example: `10.1.0.2`)
 
 ### Installation
 
-Run the setup scripts in order:
+Configure and run the cluster setup in the VM:
 
 ```bash
-# Global storage setup
-sudo ./setup/global_storage/main.sh
-
-# For Kubernetes
+cp setup/kubernetes/.env.example setup/kubernetes/.env
+# Edit the VM and Deucalion-specific addresses, SSH key, and Slurm settings.
 sudo ./setup/kubernetes/main.sh
-
-# For HPC
-sudo ./setup/hpc/main.sh
 ```
-Each setup subdirectory includes its own `README.md` and a `cleanup.sh` helper.
+
+Run the HPC setup on Deucalion:
+
+```bash
+cp setup/hpc/.env.example setup/hpc/.env
+bash setup/hpc/main.sh
+```
+
+The Kubernetes setup starts a persistent SSH tunnel from the VM to Deucalion. It forwards the sidecar connection locally and exposes the VM's Kubernetes API on port `19002` and MinIO on port `19001` at the configured login-node internal address.
 
 ## Testing
 
-Run tests to validate your setup:
-1. Add the files in `/tests/datasets` to the MinIO DB.
-2. Run the tests in `/tests/workflows` in the Argo UI.
+See [tests/README.md](tests/README.md) for loading the sample datasets into cluster-local MinIO and running the Argo workflows.

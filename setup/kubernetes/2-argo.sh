@@ -5,7 +5,7 @@
 #   ARGO_VERSION        - Argo Workflows release tag (default: v3.7.12)
 #   CALICO_VERSION      - Calico manifest version (default: v3.28.0)
 #   DEX_VERSION         - Dex release version (default: v2.37.0)
-#   MACHINE_HOST        - Machine IP for Argo Server access (default: 10.227.208.123)
+#   MACHINE_HOST        - Machine IP for Argo Server access (default: K8S_NODE_IP)
 # Example:
 #   ARGO_VERSION=v3.7.12 ./setup/kubernetes/2-argo.sh
 
@@ -15,7 +15,18 @@ set -euo pipefail
 ARGO_VERSION="${ARGO_VERSION:-v3.7.12}"
 CALICO_VERSION="${CALICO_VERSION:-v3.28.0}"
 DEX_VERSION="${DEX_VERSION:-v2.37.0}"
-MACHINE_HOST="${MACHINE_HOST:-10.227.208.123}"
+MACHINE_HOST="${MACHINE_HOST:-${K8S_NODE_IP:-127.0.0.1}}"
+OBJECT_STORE_VERSION="${OBJECT_STORE_VERSION:-RELEASE.2025-02-07T23-21-09Z}"
+OBJECT_STORE_DATA_DIR="${OBJECT_STORE_DATA_DIR:-/var/lib/lisa-object-store}"
+OBJECT_STORE_NODE_PORT="${OBJECT_STORE_NODE_PORT:-30900}"
+OBJECT_STORE_CONSOLE_NODE_PORT="${OBJECT_STORE_CONSOLE_NODE_PORT:-30901}"
+OBJECT_STORE_ACCESS_KEY="${OBJECT_STORE_ACCESS_KEY:-lisa-admin}"
+OBJECT_STORE_SECRET_KEY="${OBJECT_STORE_SECRET_KEY:-change-this-local-secret}"
+
+if [[ -z "${ARGO_ADMIN_PASSWORD:-}" ]]; then
+  echo "ARGO_ADMIN_PASSWORD must be set in setup/kubernetes/.env or the environment." >&2
+  exit 1
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root (use sudo)"
@@ -29,18 +40,18 @@ for cmd in kubectl htpasswd openssl; do
   fi
 done
 
-echo "[1/10] Installing CNI (Calico) ..."
+echo "[1/11] Installing CNI (Calico) ..."
 kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
 
-echo "[2/10] Waiting for all cluster nodes to join..."
+echo "[2/11] Waiting for all cluster nodes to join..."
 kubectl wait --for=condition=Ready nodes --all --timeout=300s || true
-echo "[2/10] Node readiness check complete."
+echo "[2/11] Node readiness check complete."
 
 
-echo "[3/10] Disabling control-plane node taints (required for Argo on a single-node cluster) ..."
+echo "[3/11] Disabling control-plane node taints (required for Argo on a single-node cluster) ..."
 kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
 
-echo "[4/10] Installing Argo Workflows ..."
+echo "[4/11] Installing Argo Workflows ..."
 # Create namespace
 kubectl create namespace argo || true
 kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/install.yaml
@@ -49,12 +60,90 @@ kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/dow
 kubectl wait --for=condition=Ready pods --all -n argo --timeout=300s || true
 # same as > sudo kubectl get pods -n argo
 
-ADMIN_BCRYPT="$(htpasswd -bnBC 10 "" "admin123" | tr -d ':\n')"
+echo "[5/11] Deploying cluster-local object storage ..."
+mkdir -p "$OBJECT_STORE_DATA_DIR"
+chown 1000:1000 "$OBJECT_STORE_DATA_DIR"
+chmod 750 "$OBJECT_STORE_DATA_DIR"
+kubectl create secret generic lisa-object-store -n default \
+  --from-literal=access-key="$OBJECT_STORE_ACCESS_KEY" \
+  --from-literal=secret-key="$OBJECT_STORE_SECRET_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lisa-object-store
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lisa-object-store
+  template:
+    metadata:
+      labels:
+        app: lisa-object-store
+    spec:
+      containers:
+      - name: minio
+        image: minio/minio:${OBJECT_STORE_VERSION}
+        args: ["server", "/data", "--console-address", ":9001"]
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: lisa-object-store
+              key: access-key
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: lisa-object-store
+              key: secret-key
+        ports:
+        - name: api
+          containerPort: 9000
+        - name: console
+          containerPort: 9001
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        hostPath:
+          path: ${OBJECT_STORE_DATA_DIR}
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lisa-object-store
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: lisa-object-store
+  ports:
+  - name: api
+    port: 9000
+    targetPort: api
+    nodePort: ${OBJECT_STORE_NODE_PORT}
+  - name: console
+    port: 9001
+    targetPort: console
+    nodePort: ${OBJECT_STORE_CONSOLE_NODE_PORT}
+EOF
+kubectl rollout status deployment/lisa-object-store -n default --timeout=180s
+
+ADMIN_BCRYPT="$(printf '%s\n' "$ARGO_ADMIN_PASSWORD" | htpasswd -nBC 10 -i "" | tr -d ':\n')"
 
 DEX_CLIENT_SECRET="$(openssl rand -hex 32)"
 
 
-echo "[5/10] Generating self-signed TLS cert for Dex ..."
+echo "[6/11] Generating self-signed TLS cert for Dex ..."
 openssl req -x509 -nodes -newkey rsa:2048 \
   -keyout /tmp/dex-tls.key \
   -out    /tmp/dex-tls.crt \
@@ -70,7 +159,7 @@ kubectl create secret generic dex-tls -n argo \
 rm -f /tmp/dex-tls.crt /tmp/dex-tls.key
 
 
-echo "[6/10] Deploying Dex ..."
+echo "[7/11] Deploying Dex ..."
 
 kubectl apply -f - <<EOF
 apiVersion: v1
@@ -163,7 +252,7 @@ EOF
 kubectl wait --for=condition=Ready pod -l app=dex -n argo --timeout=120s
 
 
-echo "[7/10] Creating OAuth2 client secrets ..."
+echo "[8/11] Creating OAuth2 client secrets ..."
 
 kubectl create secret generic argo-workflows-sso -n argo \
   --from-literal=client-id=argo-workflows \
@@ -171,7 +260,7 @@ kubectl create secret generic argo-workflows-sso -n argo \
   --dry-run=client -o yaml | kubectl apply -f -
 
 
-echo "[8/10] Configuring Argo Server SSO ..."
+echo "[9/11] Configuring Argo Server SSO ..."
 
 kubectl create secret generic argo-workflows-sso -n argo \
   --from-literal=client-id=argo-workflows \
@@ -196,7 +285,7 @@ data:
     insecureSkipVerify: true
 "
 
-echo "[9/10] Exposing Argo Server with SSO ..."
+echo "[10/11] Exposing Argo Server with SSO ..."
 
 kubectl patch deployment argo-server -n argo --type=strategic -p '{
   "spec": {
@@ -228,7 +317,7 @@ kubectl rollout restart deployment/argo-server -n argo
 kubectl rollout status deployment/argo-server -n argo --timeout=120s
 # kubectl get pods -n argo
 
-echo "[10/10] Creating RBAC roles and bindings ..."
+echo "[11/11] Creating RBAC roles and bindings ..."
 sudo kubectl apply -f - <<EOF
 # Role + binding for the default SA that runs user workflows
 apiVersion: rbac.authorization.k8s.io/v1
@@ -346,7 +435,7 @@ echo "  Dex OIDC issuer    :  https://${MACHINE_HOST}:32000/dex"
 echo ""
 echo "  Login credentials"
 echo "    Email   : admin@example.com"
-echo "    Password: admin123"
+echo "    Password: value configured by ARGO_ADMIN_PASSWORD"
 echo ""
 echo "  NOTE: clicking Login redirects to Dex over HTTPS."
 echo "  Accept the self-signed certificate warning in the browser."

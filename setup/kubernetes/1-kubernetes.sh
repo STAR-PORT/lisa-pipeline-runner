@@ -6,6 +6,7 @@
 #   K8S_VERSION         - Kubernetes minor version (default: 1.35)
 #   K8S_FULL_VERSION    - Kubernetes full version (default: 1.35.3)
 #   K8S_PKG_VERSION     - Debian package version (default: ${K8S_FULL_VERSION}-1.1)
+#   K8S_NODE_IP         - VM address used by the API server (default: auto-detected)
 # Example:
 #   K8S_VERSION=1.35 K8S_FULL_VERSION=1.35.3 ./setup/kubernetes/1-kubernetes.sh
 
@@ -26,6 +27,12 @@ fi
 K8S_VERSION="${K8S_VERSION:-1.35}"
 K8S_FULL_VERSION="${K8S_FULL_VERSION:-1.35.3}"
 K8S_PKG_VERSION="${K8S_PKG_VERSION:-${K8S_FULL_VERSION}-1.1}"
+K8S_NODE_IP="${K8S_NODE_IP:-$(ip -4 route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}')}"
+
+if [[ -z "$K8S_NODE_IP" ]]; then
+  echo "Could not determine the VM's IPv4 address. Set K8S_NODE_IP explicitly."
+  exit 1
+fi
 
 if [ -f /etc/kubernetes/admin.conf ]; then
   echo "Kubernetes already initialized on this host. Exiting without changes."
@@ -118,7 +125,10 @@ echo "[9/10] Pre-pulling kubeadm images ..."
 kubeadm config images pull --kubernetes-version v${K8S_FULL_VERSION}
 
 echo "[9/10] Initializing cluster ..."
-kubeadm init --kubernetes-version v${K8S_FULL_VERSION}
+kubeadm init \
+  --kubernetes-version "v${K8S_FULL_VERSION}" \
+  --apiserver-advertise-address "$K8S_NODE_IP" \
+  --control-plane-endpoint "${K8S_NODE_IP}:6443"
 
 echo "[10/10] Installing root kubeconfig for sudo users"
 mkdir -p /root/.kube
