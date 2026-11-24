@@ -35,6 +35,11 @@ if [[ -z "$OBJECT_STORE_ACCESS_KEY" || -z "$OBJECT_STORE_SECRET_KEY" ]]; then
   exit 1
 fi
 
+if [[ ${#OBJECT_STORE_ACCESS_KEY} -lt 8 ]]; then
+  echo "OBJECT_STORE_ACCESS_KEY must be at least 8 characters for Garage." >&2
+  exit 1
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root (use sudo)"
   exit 1
@@ -76,6 +81,7 @@ EXISTING_GARAGE_RPC_SECRET="$(kubectl get secret lisa-garage-runtime -n default 
 EXISTING_GARAGE_ADMIN_TOKEN="$(kubectl get secret lisa-garage-runtime -n default -o jsonpath='{.data.admin-token}' 2>/dev/null | base64 --decode 2>/dev/null || true)"
 GARAGE_RPC_SECRET="${GARAGE_RPC_SECRET:-${EXISTING_GARAGE_RPC_SECRET:-$(openssl rand -hex 32)}}"
 GARAGE_ADMIN_TOKEN="${GARAGE_ADMIN_TOKEN:-${EXISTING_GARAGE_ADMIN_TOKEN:-$(openssl rand -base64 32)}}"
+OBJECT_STORE_CREDENTIALS_HASH="$(printf '%s:%s' "$OBJECT_STORE_ACCESS_KEY" "$OBJECT_STORE_SECRET_KEY" | openssl dgst -sha256 | awk '{print $NF}')"
 
 kubectl create secret generic lisa-object-store-credentials -n default \
   --from-literal=accessKey="$OBJECT_STORE_ACCESS_KEY" \
@@ -124,6 +130,8 @@ spec:
     metadata:
       labels:
         app: lisa-object-store
+      annotations:
+        lisa-pipeline-runner/garage-credentials-sha256: "${OBJECT_STORE_CREDENTIALS_HASH}"
     spec:
       containers:
       - name: garage
