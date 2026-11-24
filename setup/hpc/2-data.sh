@@ -6,9 +6,9 @@ set -euo pipefail
 HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
 HPC_TOOLS_DIR="${HPC_TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
 HPC_DATA_DIR="${HPC_DATA_DIR:-${HPC_PROJECT_ROOT}/data}"
-MC_VERSION="${MC_VERSION:-RELEASE.2025-02-08T19-14-21Z}"
+MC_VERSION="${MC_VERSION:-RELEASE.2025-08-13T08-35-41Z}"
 
 mkdir -p "$HPC_TOOLS_DIR" "$HPC_DATA_DIR/users/system"
 wget -O "$HPC_TOOLS_DIR/mc" \
-  "https://dl.min.io/client/mc/release/linux-amd64/archive/mc.${MC_VERSION}"
+  "https://github.com/minio/mc/releases/download/${MC_VERSION}/mc.linux-amd64.${MC_VERSION}"
 chmod 755 "$HPC_TOOLS_DIR/mc"
