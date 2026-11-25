@@ -11,7 +11,7 @@
 #  SIDECAR_SSH_USER          - SSH username for connecting to the HPC sidecar
 #  SIDECAR_SSH_HOST          - SSH host for connecting to the HPC sidecar
 #  SIDECAR_SSH_KEY_PATH      - SSH private key path for the remote host (default: /root/.ssh/id_ed25519)
-#  SIDECAR_LOCAL_HOST        - Local interface to bind the SSH tunnel (default: 127.0.0.1)
+#  SIDECAR_LOCAL_HOST        - Local interface to bind the SSH tunnel (default: 127.0.0.2)
 #  SIDECAR_LOCAL_PORT        - Local port for the SSH tunnel (default: 5000)
 #  SIDECAR_REMOTE_PORT       - Remote port for the SSH tunnel (default: 4000)
 #  HPC_FORWARD_BIND_ADDRESS  - Deucalion login-node internal address (default: 10.1.0.2)
@@ -30,7 +30,7 @@ INTERLINK_VERSION="${INTERLINK_VERSION:-0.6.1}"
 SIDECAR_SSH_USER="${SIDECAR_SSH_USER:-isabelmoutinho}"
 SIDECAR_SSH_HOST="${SIDECAR_SSH_HOST:-ln01.deucalion.macc.fccn.pt}"
 SIDECAR_SSH_KEY_PATH="${SIDECAR_SSH_KEY_PATH:-/root/.ssh/id_ed25519}"
-SIDECAR_LOCAL_HOST="${SIDECAR_LOCAL_HOST:-127.0.0.1}"
+SIDECAR_LOCAL_HOST="${SIDECAR_LOCAL_HOST:-127.0.0.2}"
 SIDECAR_LOCAL_PORT="${SIDECAR_LOCAL_PORT:-5000}"
 SIDECAR_REMOTE_PORT="${SIDECAR_REMOTE_PORT:-4000}"
 HPC_FORWARD_BIND_ADDRESS="${HPC_FORWARD_BIND_ADDRESS:-10.1.0.2}"

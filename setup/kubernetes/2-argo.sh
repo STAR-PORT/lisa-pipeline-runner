@@ -13,6 +13,7 @@
 set -euo pipefail
 
 ARGO_VERSION="${ARGO_VERSION:-v3.7.12}"
+ARGO_EXECUTOR_IMAGE="${ARGO_EXECUTOR_IMAGE:-quay.io/argoproj/argoexec:${ARGO_VERSION}}"
 CALICO_VERSION="${CALICO_VERSION:-v3.33.1}"
 DEX_VERSION="${DEX_VERSION:-v2.37.0}"
 MACHINE_HOST="${MACHINE_HOST:-${K8S_NODE_IP:-127.0.0.1}}"
@@ -51,6 +52,7 @@ for cmd in kubectl htpasswd openssl; do
     exit 1
   fi
 done
+# sudo apt update && sudo apt install apache2-utils
 
 echo "[1/11] Installing CNI (Calico) ..."
 kubectl apply -f "https://raw.githubusercontent.com/projectcalico/calico/${CALICO_VERSION}/manifests/calico.yaml"
@@ -392,6 +394,8 @@ kubectl create secret generic argo-workflows-sso -n argo \
 
 kubectl patch configmap workflow-controller-configmap -n argo --type=merge -p "
 data:
+  executor: |
+    image: ${ARGO_EXECUTOR_IMAGE}
   sso: |
     issuer: https://${MACHINE_HOST}:32000/dex
     clientId:

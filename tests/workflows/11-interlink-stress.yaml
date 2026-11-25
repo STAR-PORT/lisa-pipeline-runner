@@ -112,11 +112,11 @@ spec:
       - "printf 'garage artifact round-trip input\\n' > /tmp/input.txt"
       resources:
         requests:
-          cpu: "{{workflow.parameters.cpus-per-task}}"
-          memory: "{{workflow.parameters.memory}}"
+          cpu: "1"
+          memory: "256Mi"
         limits:
-          cpu: "{{workflow.parameters.cpus-per-task}}"
-          memory: "{{workflow.parameters.memory}}"
+          cpu: "1"
+          memory: "256Mi"
 
   - name: interlink-stress
     inputs:
@@ -192,11 +192,11 @@ spec:
         printf 'stress completed: %s\n' "$(date -u +%FT%TZ)" > /tmp/output.txt
       resources:
         requests:
-          cpu: "{{workflow.parameters.cpus-per-task}}"
-          memory: "{{workflow.parameters.memory}}"
+          cpu: "1"
+          memory: "256Mi"
         limits:
-          cpu: "{{workflow.parameters.cpus-per-task}}"
-          memory: "{{workflow.parameters.memory}}"
+          cpu: "1"
+          memory: "256Mi"
 
   - name: verify-output
     inputs:
@@ -253,8 +253,8 @@ spec:
       - "grep -q '^stress completed:' /tmp/output.txt && cat /tmp/output.txt"
       resources:
         requests:
-          cpu: "{{workflow.parameters.cpus-per-task}}"
-          memory: "{{workflow.parameters.memory}}"
+          cpu: "1"
+          memory: "256Mi"
         limits:
-          cpu: "{{workflow.parameters.cpus-per-task}}"
-          memory: "{{workflow.parameters.memory}}"
+          cpu: "1"
+          memory: "256Mi"

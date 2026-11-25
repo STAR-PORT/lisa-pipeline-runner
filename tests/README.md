@@ -9,6 +9,8 @@
 
 Keep the VM-to-Deucalion SSH tunnel running. Update the workflow's Slurm account, partition, and reverse-forward API host/port parameters to match your setup, then submit it:
 
+If Deucalion compute nodes cannot pull `quay.io/argoproj/argoexec:v3.7.12`, place that version's Apptainer image on shared storage and set `ARGO_EXECUTOR_IMAGE` in `setup/kubernetes/.env` to its absolute `.sif` path. Rerun `setup/kubernetes/main.sh` so Argo uses that image for its injected init and wait containers.
+
 ```sh
 kubectl create -f tests/workflows/11-interlink-stress.yaml
 ```

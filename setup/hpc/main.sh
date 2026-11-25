@@ -16,7 +16,10 @@ else
   exit 1
 fi
 
-echo "[STEP 1] Running HPC bridge setup"
+echo "[STEP 1] Preparing shared Argo tools"
+bash "$SCRIPT_DIR/2-tools.sh"
+
+echo "[STEP 2] Running HPC bridge setup"
 bash "$SCRIPT_DIR/1-bridge.sh"
 
 echo "HPC setup complete."

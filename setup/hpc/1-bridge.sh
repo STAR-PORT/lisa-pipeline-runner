@@ -7,12 +7,14 @@ set -euo pipefail
 #   INTERLINK_SIDECAR_VERSION - InterLink sidecar release version (default: 0.6.1)
 #   INTERLINK_DIR             - InterLink install/config directory (default: ${HPC_PROJECT_ROOT}/.interlink)
 #   INTERLINK_DATA_ROOT       - job data root inside InterLink (default: ${INTERLINK_DIR}/jobs)
+#   HPC_TOOLS_DIR             - shared tools directory mounted into Slurm containers (default: ${HPC_PROJECT_ROOT}/tools)
 
 HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
 HPC_USER="${HPC_USER:-${USER:-$(whoami)}}"
 INTERLINK_SIDECAR_VERSION="${INTERLINK_SIDECAR_VERSION:-0.6.1}"
 INTERLINK_DIR="${INTERLINK_DIR:-${HPC_PROJECT_ROOT}/.interlink}"
 INTERLINK_DATA_ROOT="${INTERLINK_DATA_ROOT:-${INTERLINK_DIR}/jobs}"
+HPC_TOOLS_DIR="${HPC_TOOLS_DIR:-${HPC_PROJECT_ROOT}/tools}"
 
 echo "[1/6] Preparing InterLink directory"
 mkdir -p "$INTERLINK_DIR"
@@ -36,6 +38,8 @@ SinfoPath: "/usr/bin/sinfo"
 ImagePrefix: "docker://"
 SingularityPath: "singularity"
 SingularityPrefix: ""
+SingularityDefaultOptions:
+	- "--bind ${HPC_TOOLS_DIR}:/tools:ro"
 ExportPodData: true
 DataRootFolder: "${INTERLINK_DATA_ROOT}/"
 Namespace: "vk"

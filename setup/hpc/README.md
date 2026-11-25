@@ -2,7 +2,8 @@
 
 This directory contains the Deucalion-side InterLink Slurm setup. `main.sh` loads `setup/hpc/.env` and runs:
 
-- `setup/hpc/1-bridge.sh` — installs and starts the InterLink Slurm sidecar
+- `setup/hpc/2-tools.sh` — installs the Argo CLI and pulls the version-matched `argoexec` Apptainer image into shared storage
+- `setup/hpc/1-bridge.sh` — installs and starts the InterLink Slurm sidecar, binding the shared tools directory read-only at `/tools` inside Slurm containers
 
 ## Usage
 
