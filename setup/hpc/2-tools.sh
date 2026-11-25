@@ -33,6 +33,7 @@ CONTAINER_RUNTIME="${CONTAINER_RUNTIME:-}"
 pull_sif_if_missing() {
 	local sif_path="$1"
 	local image_uri="$2"
+	MKSQUASHFS_WRAPPER_DIR=""
 
 	if [[ -s "$sif_path" ]]; then
 		return
@@ -52,7 +53,24 @@ pull_sif_if_missing() {
 		exit 1
 	fi
 
-	"$CONTAINER_RUNTIME" pull "$sif_path" "$image_uri"
+	if [[ -z "$MKSQUASHFS_WRAPPER_DIR" ]]; then
+		local mksquashfs_path
+		mksquashfs_path="$(command -v mksquashfs || true)"
+		if [[ -z "$mksquashfs_path" ]]; then
+			echo "mksquashfs was not found in PATH; cannot build a SIF locally." >&2
+			exit 1
+		fi
+
+		MKSQUASHFS_WRAPPER_DIR="$(mktemp -d "${TMPDIR:-/tmp}/mksquashfs-wrapper.XXXXXX")"
+		cat > "$MKSQUASHFS_WRAPPER_DIR/mksquashfs" <<EOF
+#!/bin/sh
+exec "$mksquashfs_path" "\$@" -processors 1
+EOF
+		chmod 755 "$MKSQUASHFS_WRAPPER_DIR/mksquashfs"
+		trap 'rm -rf "$MKSQUASHFS_WRAPPER_DIR"' EXIT
+	fi
+
+	PATH="$MKSQUASHFS_WRAPPER_DIR:$PATH" "$CONTAINER_RUNTIME" pull "$sif_path" "$image_uri"
 }
 
 printf '%s\n' \

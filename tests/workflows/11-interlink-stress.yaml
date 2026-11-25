@@ -184,7 +184,9 @@ spec:
       args:
       - |
         set -euo pipefail
-        test "$(cat /tmp/input.txt)" = "garage artifact round-trip input"
+        in=/tmp/input.txt
+        if [ -d "$in" ]; then in="$in/input-data"; fi   # interLink binds the volume root, ignoring subPath
+        test "$(cat "$in")" = "garage artifact round-trip input"
         echo "Starting stress test on $(hostname)"
         stress-ng \
           --cpu 1 \
@@ -254,7 +256,10 @@ spec:
       image: "{{workflow.parameters.busybox-image}}"
       command: ["sh", "-c"]
       args:
-      - "grep -q '^stress completed:' /tmp/output.txt && cat /tmp/output.txt"
+      - |
+        f=/tmp/output.txt
+        if [ -d "$f" ]; then f="$f/output-data"; fi
+        grep -q '^stress completed:' "$f" && cat "$f"
       resources:
         requests:
           cpu: "1"

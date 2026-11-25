@@ -84,6 +84,73 @@ echo "[6/6] Reloading systemd and enabling user services"
 systemctl --user daemon-reload
 systemctl --user enable --now interlink-sidecar
 
+#--------------------------------------------
+
+cat > /projects/F202500007HPCVLABUPORTO/isabelmoutinho/lisa-pipeline-runner/.interlink/relay.py <<'EOF'
+import socket, threading, sys
+
+BIND = "10.1.0.2"
+PORTS = [19001, 19002]
+
+def pipe(src, dst):
+    try:
+        while True:
+            data = src.recv(65536)
+            if not data:
+                break
+            dst.sendall(data)
+    except OSError:
+        pass
+    finally:
+        for s in (src, dst):
+            try: s.shutdown(socket.SHUT_RDWR)
+            except OSError: pass
+            s.close()
+
+def handle(client, port):
+    try:
+        upstream = socket.create_connection(("127.0.0.1", port), timeout=10)
+        upstream.settimeout(None)
+    except OSError as e:
+        print(f"upstream 127.0.0.1:{port} failed: {e}", flush=True)
+        client.close()
+        return
+    threading.Thread(target=pipe, args=(client, upstream), daemon=True).start()
+    threading.Thread(target=pipe, args=(upstream, client), daemon=True).start()
+
+def serve(port):
+    s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind((BIND, port))
+    s.listen(128)
+    print(f"relaying {BIND}:{port} -> 127.0.0.1:{port}", flush=True)
+    while True:
+        c, _ = s.accept()
+        threading.Thread(target=handle, args=(c, port), daemon=True).start()
+
+for p in PORTS:
+    threading.Thread(target=serve, args=(p,), daemon=True).start()
+threading.Event().wait()
+EOF
+
+chmod +x "/projects/F202500007HPCVLABUPORTO/isabelmoutinho/lisa-pipeline-runner/.interlink/relay.py"
+
+cat > ~/.config/systemd/user/interlink-relay.service <<'EOF'
+[Unit]
+Description=Relay 10.1.0.2:19001/19002 to loopback SSH reverse forwards
+
+[Service]
+ExecStart=/usr/bin/python3 /projects/F202500007HPCVLABUPORTO/isabelmoutinho/lisa-pipeline-runner/.interlink/relay.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl --user daemon-reload
+systemctl --user enable --now interlink-relay
+
 # Checks
 
 # Connections
