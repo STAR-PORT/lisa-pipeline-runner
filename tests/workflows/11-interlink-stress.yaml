@@ -30,6 +30,10 @@ spec:
       value: "10.1.0.2"
     - name: kubernetes-api-port
       value: "19002"
+    - name: busybox-image
+      value: "/projects/F202500007HPCVLABUPORTO/isabelmoutinho/lisa-pipeline-runner/tools/busybox-1.36.sif"
+    - name: stress-image
+      value: "/projects/F202500007HPCVLABUPORTO/isabelmoutinho/lisa-pipeline-runner/tools/stress-ng.sif"
   templates:
   - name: pipeline
     dag:
@@ -106,10 +110,10 @@ spec:
         - name: KUBERNETES_SERVICE_PORT_HTTPS
           value: "{{workflow.parameters.kubernetes-api-port}}"
     container:
-      image: busybox:1.36
+      image: "{{workflow.parameters.busybox-image}}"
       command: ["sh", "-c"]
       args:
-      - "printf 'garage artifact round-trip input\\n' > /tmp/input.txt"
+      - "echo 'garage artifact round-trip input' | tee /tmp/input.txt"
       resources:
         requests:
           cpu: "1"
@@ -175,7 +179,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT_HTTPS
           value: "{{workflow.parameters.kubernetes-api-port}}"
     container:
-      image: colinianking/stress-ng
+      image: "{{workflow.parameters.stress-image}}"
       command: ["/bin/bash", "-c"]
       args:
       - |
@@ -247,7 +251,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT_HTTPS
           value: "{{workflow.parameters.kubernetes-api-port}}"
     container:
-      image: busybox:1.36
+      image: "{{workflow.parameters.busybox-image}}"
       command: ["sh", "-c"]
       args:
       - "grep -q '^stress completed:' /tmp/output.txt && cat /tmp/output.txt"

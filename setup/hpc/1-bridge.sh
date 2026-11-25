@@ -9,7 +9,7 @@ set -euo pipefail
 #   INTERLINK_DATA_ROOT       - job data root inside InterLink (default: ${INTERLINK_DIR}/jobs)
 #   HPC_TOOLS_DIR             - shared tools directory mounted into Slurm containers (default: ${HPC_PROJECT_ROOT}/tools)
 
-HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/EEHPC-DEV-2026D02-075/lisa-pipeline-runner}"
+HPC_PROJECT_ROOT="${HPC_PROJECT_ROOT:-/projects/F202500007HPCVLABUPORTO/isabelmoutinho/lisa-pipeline-runner}"
 HPC_USER="${HPC_USER:-${USER:-$(whoami)}}"
 INTERLINK_SIDECAR_VERSION="${INTERLINK_SIDECAR_VERSION:-0.6.1}"
 INTERLINK_DIR="${INTERLINK_DIR:-${HPC_PROJECT_ROOT}/.interlink}"
@@ -39,7 +39,11 @@ ImagePrefix: "docker://"
 SingularityPath: "singularity"
 SingularityPrefix: ""
 SingularityDefaultOptions:
-	- "--bind ${HPC_TOOLS_DIR}:/tools:ro"
+  - "--no-eval"
+  - "-B"
+  - "${HPC_TOOLS_DIR}:/tools:ro"
+  - "-B"
+  - "${HPC_TOOLS_DIR}/hosts:/etc/hosts:ro"
 ExportPodData: true
 DataRootFolder: "${INTERLINK_DATA_ROOT}/"
 Namespace: "vk"

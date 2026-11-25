@@ -11,6 +11,8 @@ Keep the VM-to-Deucalion SSH tunnel running. Update the workflow's Slurm account
 
 If Deucalion compute nodes cannot pull `quay.io/argoproj/argoexec:v3.7.12`, place that version's Apptainer image on shared storage and set `ARGO_EXECUTOR_IMAGE` in `setup/kubernetes/.env` to its absolute `.sif` path. Rerun `setup/kubernetes/main.sh` so Argo uses that image for its injected init and wait containers.
 
+The HPC workflow's BusyBox and stress-ng images are also expected as SIFs in the shared `tools` directory because compute nodes may not reach Docker Hub. `setup/hpc/2-tools.sh` pulls them when possible; otherwise copy the matching images to the paths configured by the workflow parameters. It also creates a hosts file mapping `kubernetes.default.svc` to the reverse-forward address and the sidecar binds it into Slurm containers.
+
 ```sh
 kubectl create -f tests/workflows/11-interlink-stress.yaml
 ```
