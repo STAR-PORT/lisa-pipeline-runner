@@ -93,7 +93,7 @@ ErrorsOnlyLogging: false
 # Node configuration
 NodeName: "${INTERLINK_NODE_NAME}"
 NodeLabels:
-"interlink.cern.ch/provider": "remote-hpc"
+  "interlink.cern.ch/provider": "remote-hpc"
 EOF
 
 echo "[4/6] Writing systemd service unit files"
